@@ -186,35 +186,29 @@ Aguardo sua confirmação! 😊</textarea>
     <!-- Modal de Configuração do WhatsApp -->
     <div id="whatsappModal" class="modal hidden">
         <div class="modal-content">
-            <h3><i class="fab fa-whatsapp"></i> Envio de Convites</h3>
+            <h3><i class="fas fa-list-check"></i> Seleção e Envio de Convites</h3>
             
-            <div id="apiStatus" style="display: none;">
-                <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
-                    <strong>✅ API WhatsApp Configurada!</strong><br>
-                    As mensagens serão enviadas automaticamente com imagem.
-                </div>
-            </div>
-            
-            <div id="manualStatus" style="display: none;">
+            <div id="manualStatus">
                 <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196f3;">
                     <strong>🎉 Sistema de Páginas Personalizadas!</strong><br>
                     Cada convidado receberá um link único que abre uma página profissional com imagem + informações + confirmação!
                 </div>
-                <p>Para enviar as mensagens manualmente, você precisa:</p>
-            <ol>
-                <li>Ter o WhatsApp Web aberto em seu navegador</li>
-                <li>Estar logado com o número que deseja usar</li>
-                <li>Ter o WhatsApp conectado</li>
-            </ol>
-            <div class="form-group">
-                <label for="whatsappNumber">Seu número WhatsApp (com código do país):</label>
-                <input type="text" id="whatsappNumber" placeholder="+5511999999999" />
-            </div>
+                <p><strong>Como funciona:</strong></p>
+                <ol>
+                    <li>Clique em "Preparar Mensagens" para abrir a interface de seleção</li>
+                    <li>Selecione os convidados que deseja enviar</li>
+                    <li>Use os botões "Enviar" individuais ou "Enviar Selecionados"</li>
+                    <li>WhatsApp Web será aberto automaticamente</li>
+                </ol>
+                <div class="form-group">
+                    <label for="whatsappNumber">Seu número WhatsApp (com código do país):</label>
+                    <input type="text" id="whatsappNumber" placeholder="+5511999999999" />
+                </div>
             </div>
             
             <div class="modal-actions">
                 <button id="openWhatsApp" class="btn-primary">
-                    <i class="fab fa-whatsapp"></i> Preparar Mensagens
+                    <i class="fas fa-list-check"></i> Preparar Mensagens com Seleção
                 </button>
                 <button id="closeModal" class="btn-secondary">Fechar</button>
             </div>

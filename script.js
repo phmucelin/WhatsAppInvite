@@ -18,6 +18,9 @@ function initializeApp() {
     const nextSaturday = getNextSaturday();
     document.getElementById('eventDate').value = nextSaturday;
     
+    // Carregar imagem salva do localStorage
+    loadSavedImage();
+    
     // Atualizar preview inicial
     updateInvitePreview();
 }
@@ -255,19 +258,8 @@ function showWhatsAppModal() {
         return;
     }
     
-    // Verificar se API está configurada
-    const apiConfigured = window.whatsappAPI && window.whatsappAPI.validateConfig();
-    
-    // Mostrar status apropriado
-    if (apiConfigured) {
-        document.getElementById('apiStatus').style.display = 'block';
-        document.getElementById('manualStatus').style.display = 'none';
-        document.getElementById('openWhatsApp').innerHTML = '<i class="fab fa-whatsapp"></i> Enviar Automaticamente';
-    } else {
-        document.getElementById('apiStatus').style.display = 'none';
-        document.getElementById('manualStatus').style.display = 'block';
-        document.getElementById('openWhatsApp').innerHTML = '<i class="fab fa-whatsapp"></i> Preparar Mensagens';
-    }
+    // Sempre mostrar a interface de seleção manual
+    document.getElementById('manualStatus').style.display = 'block';
     
     document.getElementById('whatsappModal').classList.remove('hidden');
 }
@@ -283,17 +275,11 @@ function openWhatsAppWeb() {
         return;
     }
     
-    // Verificar se API está configurada
-    if (window.whatsappAPI && window.whatsappAPI.validateConfig()) {
-        // Usar API para envio automático
-        sendAllMessagesViaAPI();
-    } else {
-        // Preparar mensagens para envio manual
+    // Sempre usar o sistema de seleção manual
     prepareMessages();
     
     // Abrir WhatsApp Web
     window.open('https://web.whatsapp.com/', '_blank');
-    }
     
     closeWhatsAppModal();
 }
@@ -715,6 +701,8 @@ function handleImageSelection(event) {
         // Imagem pré-definida
         selectedImage = selectedValue;
         showImagePreview(selectedValue);
+        // Salvar imagem no localStorage
+        localStorage.setItem('selectedImage', selectedImage);
     }
 }
 
@@ -738,7 +726,11 @@ function handleCustomImageUpload(event) {
         const reader = new FileReader();
         reader.onload = function(e) {
             selectedImage = e.target.result;
+            console.log('🖼️ Imagem carregada:', selectedImage.substring(0, 100) + '...');
             showImagePreview(selectedImage);
+            // Salvar imagem no localStorage
+            localStorage.setItem('selectedImage', selectedImage);
+            console.log('💾 Imagem salva no localStorage');
             showNotification('✅ Imagem carregada com sucesso!', 'success');
         };
         reader.readAsDataURL(file);
@@ -760,7 +752,23 @@ function removeImage() {
     document.getElementById('imagePreview').style.display = 'none';
     document.getElementById('inviteImage').value = '';
     document.getElementById('customImageUpload').value = '';
+    // Remover imagem do localStorage
+    localStorage.removeItem('selectedImage');
     showNotification('🗑️ Imagem removida!', 'info');
+}
+
+// Função para carregar imagem salva do localStorage
+function loadSavedImage() {
+    const savedImage = localStorage.getItem('selectedImage');
+    if (savedImage && savedImage !== 'null' && savedImage !== 'undefined') {
+        selectedImage = savedImage;
+        showImagePreview(savedImage);
+        
+        // Marcar o select como custom se for uma imagem customizada
+        if (savedImage.startsWith('data:image/')) {
+            document.getElementById('inviteImage').value = 'custom';
+        }
+    }
 }
 
 // Função global para remover imagem (chamada pelo botão HTML)
