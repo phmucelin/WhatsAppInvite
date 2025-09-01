@@ -216,11 +216,22 @@ function generateQRCode() {
 
 function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
+    
+    // Detectar se está rodando localmente ou em servidor
+    let baseUrl;
+    if (window.location.protocol === 'file:') {
+        // Rodando localmente - usar caminho relativo
+        baseUrl = './convite.html';
+    } else {
+        // Rodando em servidor - usar URL completa
+        baseUrl = `${window.location.origin}/convite.html`;
+    }
+    
     if (guestId) {
         // Usar a nova página de convite personalizada
-        return `${window.location.origin}/convite.html?event=${eventId}&guest=${guestId}`;
+        return `${baseUrl}?event=${eventId}&guest=${guestId}`;
     }
-    return `${window.location.origin}/convite.html?event=${eventId}`;
+    return `${baseUrl}?event=${eventId}`;
 }
 
 function generateEventId() {

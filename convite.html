@@ -47,13 +47,14 @@
         }
 
         .invite-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #475569 75%, #64748b 100%);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 100px rgba(30, 64, 175, 0.3);
             overflow: hidden;
             max-width: 600px;
             width: 100%;
-            animation: slideIn 0.5s ease-out;
+            animation: slideIn 0.6s ease-out;
+            border: 1px solid rgba(59, 130, 246, 0.2);
         }
 
         @keyframes slideIn {
@@ -72,9 +73,9 @@
         }
 
         .invite-header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 25%, #3b82f6 50%, #60a5fa 75%, #93c5fd 100%);
+            background: linear-gradient(135deg, #0c4a6e 0%, #075985 25%, #0369a1 50%, #0284c7 75%, #0ea5e9 100%);
             color: white;
-            padding: 30px;
+            padding: 35px 30px;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -112,14 +113,14 @@
 
         .invite-image {
             width: 100%;
-            background: #f8fafc;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: visible;
             border-radius: 0;
             margin: 0;
-            padding: 15px;
+            padding: 20px;
         }
 
         .invite-image img {
@@ -130,13 +131,14 @@
         }
 
         .invite-image .placeholder {
-            color: #6c757d;
+            color: #64748b;
             font-size: 3rem;
-            opacity: 0.5;
+            opacity: 0.7;
         }
 
         .invite-content {
             padding: 20px 30px 30px 30px;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
         }
 
         .info-item {
@@ -144,10 +146,10 @@
             align-items: flex-start;
             margin-bottom: 25px;
             padding: 20px;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            background: linear-gradient(135deg, #334155 0%, #475569 100%);
             border-radius: 15px;
-            border-left: 5px solid #1e40af;
-            box-shadow: 0 4px 15px rgba(30, 64, 175, 0.15);
+            border-left: 5px solid #0ea5e9;
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.2);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
@@ -170,13 +172,13 @@
 
         .info-item:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(30, 64, 175, 0.2);
-            border-left-color: #3b82f6;
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.3);
+            border-left-color: #38bdf8;
         }
 
         .info-item i {
             font-size: 1.8rem;
-            color: #1e40af;
+            color: #0ea5e9;
             margin-right: 20px;
             width: 35px;
             text-align: center;
@@ -185,18 +187,18 @@
         }
 
         .info-item:hover i {
-            color: #3b82f6;
+            color: #38bdf8;
         }
 
         .info-item .info-text h3 {
-            color: #333;
+            color: white;
             margin-bottom: 8px;
             font-size: 1.2rem;
             font-weight: 600;
         }
 
         .info-item .info-text p {
-            color: #666;
+            color: #cbd5e1;
             font-size: 1rem;
             line-height: 1.4;
         }
@@ -237,7 +239,7 @@
         }
 
         .btn-confirm {
-            background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+            background: linear-gradient(135deg, #0c4a6e 0%, #075985 50%, #0369a1 100%);
             color: white;
             position: relative;
             overflow: hidden;
@@ -259,12 +261,12 @@
         }
 
         .btn-confirm:hover {
-            background: linear-gradient(135deg, #047857 0%, #059669 50%, #10b981 100%);
-            transform: translateY(-3px) scale(1.02);
+            background: linear-gradient(135deg, #0a3d5a 0%, #0c4a6e 50%, #075985 100%);
+            transform: translateY(-2px);
         }
 
         .btn-decline {
-            background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f87171 100%);
+            background: linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%);
             color: white;
             position: relative;
             overflow: hidden;
@@ -286,12 +288,12 @@
         }
 
         .btn-decline:hover {
-            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #ef4444 100%);
-            transform: translateY(-3px) scale(1.02);
+            background: linear-gradient(135deg, #5c1d06 0%, #7c2d12 50%, #9a3412 100%);
+            transform: translateY(-2px);
         }
 
         .guest-name {
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%);
+            background: linear-gradient(135deg, #0c4a6e 0%, #075985 50%, #0369a1 100%);
             color: white;
             padding: 20px 25px;
             border-radius: 0;
@@ -299,7 +301,7 @@
             margin: 0;
             font-weight: 700;
             font-size: 1.3rem;
-            box-shadow: 0 4px 15px rgba(30, 64, 175, 0.3);
+            box-shadow: 0 6px 20px rgba(12, 74, 110, 0.4);
             border: none;
             position: relative;
             overflow: hidden;
@@ -310,12 +312,12 @@
         .loading {
             text-align: center;
             padding: 50px;
-            color: #666;
+            color: #cbd5e1;
         }
 
         .loading i {
             font-size: 3rem;
-            color: #667eea;
+            color: #0ea5e9;
             margin-bottom: 20px;
             animation: spin 1s linear infinite;
         }
@@ -326,12 +328,13 @@
         }
 
         .error {
-            background: #f8d7da;
-            color: #721c24;
+            background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+            color: white;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
             margin: 20px;
+            box-shadow: 0 4px 15px rgba(124, 45, 18, 0.3);
         }
 
         @media (max-width: 600px) {
