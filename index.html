@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Convites - WhatsApp</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fab fa-whatsapp"></i> Sistema de Convites WhatsApp</h1>
+            <p>Automatize o envio de convites e gerencie confirmações</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Seção de Upload da Planilha -->
+            <section class="upload-section">
+                <h2><i class="fas fa-upload"></i> Carregar Lista de Convidados</h2>
+                <div class="upload-area">
+                    <input type="file" id="csvFile" accept=".csv" />
+                    <label for="csvFile" class="upload-label">
+                        <i class="fas fa-file-csv"></i>
+                        <span>Selecione sua planilha CSV</span>
+                    </label>
+                </div>
+                <div style="text-align: center; margin: 20px 0;">
+                    <button id="addTestGuests" class="btn-secondary" style="background: #667eea; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-plus"></i> Adicionar Convidados de Teste
+                    </button>
+                </div>
+                <div id="preview" class="preview-area"></div>
+            </section>
+
+            <!-- Seção de Configuração do Evento -->
+            <section class="event-section">
+                <h2><i class="fas fa-calendar-alt"></i> Configuração do Evento</h2>
+                <div class="form-group">
+                    <label for="eventName">Nome do Evento:</label>
+                    <input type="text" id="eventName" placeholder="Ex: Aniversário da Empresa" />
+                </div>
+                <div class="form-group">
+                    <label for="eventDate">Data do Evento:</label>
+                    <input type="datetime-local" id="eventDate" />
+                </div>
+                <div class="form-group">
+                    <label for="eventLocation">Local:</label>
+                    <input type="text" id="eventLocation" placeholder="Ex: Rua das Flores, 123" />
+                </div>
+                <div class="form-group">
+                    <label for="eventDescription">Descrição:</label>
+                    <textarea id="eventDescription" placeholder="Detalhes do evento..."></textarea>
+                </div>
+            </section>
+
+            <!-- Seção de Personalização da Mensagem -->
+            <section class="message-section">
+                <h2><i class="fas fa-comment"></i> Personalizar Mensagem</h2>
+                <div class="form-group">
+                    <label for="messageTemplate">Modelo de Mensagem:</label>
+                    <textarea id="messageTemplate" rows="6" placeholder="Olá {nome}! 
+
+Você está convidado para o {evento} que acontecerá no dia {data} às {hora} no local {local}.
+
+{descricao}
+
+Para confirmar sua presença, acesse: {link}
+
+Aguardo sua confirmação! 😊">Olá {nome}! 
+
+Você está convidado para o {evento} que acontecerá no dia {data} às {hora} no local {local}.
+
+{descricao}
+
+Para confirmar sua presença, acesse: {link}
+
+Aguardo sua confirmação! 😊</textarea>
+                </div>
+                <div class="variables-info">
+                    <p><strong>Variáveis disponíveis:</strong> {nome}, {evento}, {data}, {hora}, {local}, {descricao}, {link}</p>
+                </div>
+                
+                <!-- Seção de Imagem do Convite -->
+                <div class="form-group">
+                    <label for="inviteImage">Imagem do Convite (Opcional):</label>
+                    <div class="image-selector">
+                        <select id="inviteImage" class="form-control">
+                            <option value="">Sem imagem</option>
+                            <option value="custom">Upload de imagem...</option>
+                        </select>
+                        <input type="file" id="customImageUpload" accept="image/*" style="display: none;" />
+                    </div>
+                    <div id="imagePreview" class="image-preview" style="display: none;">
+                        <img id="previewImg" src="" alt="Preview da imagem" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;" />
+                        <button type="button" onclick="removeImage()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; margin-left: 10px; cursor: pointer;">
+                            <i class="fas fa-times"></i> Remover
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção de Preview do Convite -->
+            <section class="preview-section">
+                <h2><i class="fas fa-eye"></i> Preview do Convite</h2>
+                <div class="invite-preview" id="invitePreview">
+                    <div class="invite-card">
+                        <div class="invite-header">
+                            <h3 id="previewEventName">Nome do Evento</h3>
+                            <div class="qr-code" id="qrCode"></div>
+                        </div>
+                        <div class="invite-content">
+                            <p><strong>Data:</strong> <span id="previewEventDate">Data do evento</span></p>
+                            <p><strong>Local:</strong> <span id="previewEventLocation">Local do evento</span></p>
+                            <p id="previewEventDescription">Descrição do evento</p>
+                        </div>
+                        <div class="invite-actions">
+                            <button class="btn-confirm">CONFIRMAR</button>
+                            <button class="btn-decline">NÃO CONFIRMAR</button>
+                        </div>
+                    </div>
+                </div>
+                <button id="downloadInvite" class="btn-download">
+                    <i class="fas fa-download"></i> Baixar Convite (PNG)
+                </button>
+            </section>
+
+            <!-- Seção de Envio -->
+            <section class="send-section">
+                <h2><i class="fas fa-paper-plane"></i> Enviar Convites</h2>
+                <div class="send-controls">
+                    <button id="sendAll" class="btn-send-all">
+                        <i class="fab fa-whatsapp"></i> Enviar Todos os Convites
+                    </button>
+                    <button id="sendTest" class="btn-send-test">
+                        <i class="fas fa-vial"></i> Enviar Teste
+                    </button>
+                    <button id="testAPI" class="btn-send-test" style="background: #17a2b8;">
+                        <i class="fas fa-plug"></i> Testar API WhatsApp
+                    </button>
+                </div>
+                <div id="sendProgress" class="send-progress hidden">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="progressText">Enviando convites...</p>
+                </div>
+            </section>
+
+            <!-- Seção de Dashboard -->
+            <section class="dashboard-section">
+                <h2><i class="fas fa-chart-bar"></i> Dashboard de Confirmações</h2>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <button onclick="forceUpdateDashboard()" class="btn-secondary" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-sync-alt"></i> Atualizar Dashboard
+                    </button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalInvites">0</div>
+                        <div class="stat-label">Total de Convites</div>
+                    </div>
+                    <div class="stat-card confirmed">
+                        <div class="stat-number" id="confirmedInvites">0</div>
+                        <div class="stat-label">Confirmados</div>
+                    </div>
+                    <div class="stat-card declined">
+                        <div class="stat-number" id="declinedInvites">0</div>
+                        <div class="stat-label">Não Confirmados</div>
+                    </div>
+                    <div class="stat-card pending">
+                        <div class="stat-number" id="pendingInvites">0</div>
+                        <div class="stat-label">Pendentes</div>
+                    </div>
+                </div>
+                <div class="guests-list" id="guestsList">
+                    <h3>Lista de Convidados</h3>
+                    <div class="list-container"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal de Configuração do WhatsApp -->
+    <div id="whatsappModal" class="modal hidden">
+        <div class="modal-content">
+            <h3><i class="fab fa-whatsapp"></i> Envio de Convites</h3>
+            
+            <div id="apiStatus" style="display: none;">
+                <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
+                    <strong>✅ API WhatsApp Configurada!</strong><br>
+                    As mensagens serão enviadas automaticamente com imagem.
+                </div>
+            </div>
+            
+            <div id="manualStatus" style="display: none;">
+                <p>Para enviar as mensagens manualmente, você precisa:</p>
+            <ol>
+                <li>Ter o WhatsApp Web aberto em seu navegador</li>
+                <li>Estar logado com o número que deseja usar</li>
+                <li>Ter o WhatsApp conectado</li>
+            </ol>
+            <div class="form-group">
+                <label for="whatsappNumber">Seu número WhatsApp (com código do país):</label>
+                <input type="text" id="whatsappNumber" placeholder="+5511999999999" />
+            </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="openWhatsApp" class="btn-primary">
+                    <i class="fab fa-whatsapp"></i> Enviar Convites
+                </button>
+                <button id="closeModal" class="btn-secondary">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

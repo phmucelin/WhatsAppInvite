@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmação de Presença</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .confirmation-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .event-info {
+            margin-bottom: 30px;
+        }
+
+        .event-title {
+            color: #667eea;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        .event-details {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .event-details p {
+            margin-bottom: 8px;
+        }
+
+        .confirmation-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .btn-confirm, .btn-decline {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .btn-confirm {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-decline {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-decline:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .success-message {
+            display: none;
+            color: #28a745;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        .decline-message {
+            display: none;
+            color: #dc3545;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        .loading {
+            display: none;
+            color: #667eea;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 480px) {
+            .confirmation-container {
+                padding: 30px 20px;
+            }
+
+            .confirmation-buttons {
+                flex-direction: column;
+            }
+
+            .btn-confirm, .btn-decline {
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="confirmation-container">
+        <div class="event-info">
+            <h1 class="event-title" id="eventTitle">Confirmação de Presença</h1>
+            <div class="event-details" id="eventDetails">
+                <p><strong>Evento:</strong> <span id="eventName">Carregando...</span></p>
+                <p><strong>Data:</strong> <span id="eventDate">Carregando...</span></p>
+                <p><strong>Local:</strong> <span id="eventLocation">Carregando...</span></p>
+                <p><strong>Descrição:</strong> <span id="eventDescription">Carregando...</span></p>
+            </div>
+        </div>
+
+        <div class="confirmation-buttons" id="confirmationButtons">
+            <button class="btn-confirm" onclick="confirmPresence('confirmed')">
+                ✅ Confirmar Presença
+            </button>
+            <button class="btn-decline" onclick="confirmPresence('declined')">
+                ❌ Não Poderei Ir
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            Processando sua confirmação...
+        </div>
+
+        <div class="success-message" id="successMessage">
+            ✅ Presença confirmada! Obrigado pela confirmação!
+        </div>
+
+        <div class="decline-message" id="declineMessage">
+            ❌ Entendido. Obrigado pela resposta!
+        </div>
+    </div>
+
+    <script>
+        // Obter parâmetros da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventId = urlParams.get('event');
+        const guestId = urlParams.get('guest');
+
+        // Carregar dados do evento
+        function loadEventData() {
+            const stored = localStorage.getItem('whatsappInvitesData');
+            if (stored) {
+                try {
+                    const data = JSON.parse(stored);
+                    const eventData = data.eventData || {};
+                    
+                    // Preencher informações do evento
+                    document.getElementById('eventName').textContent = eventData.name || 'Evento';
+                    document.getElementById('eventDate').textContent = formatDate(eventData.date) || 'Data não definida';
+                    document.getElementById('eventLocation').textContent = eventData.location || 'Local não definido';
+                    document.getElementById('eventDescription').textContent = eventData.description || 'Sem descrição';
+                    
+                    // Atualizar título da página
+                    document.getElementById('eventTitle').textContent = eventData.name || 'Confirmação de Presença';
+                    
+                } catch (error) {
+                    console.error('Erro ao carregar dados do evento:', error);
+                    showError('Erro ao carregar informações do evento.');
+                }
+            } else {
+                showError('Informações do evento não encontradas.');
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Data não definida';
+            
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function confirmPresence(status) {
+            // Esconder botões e mostrar loading
+            document.getElementById('confirmationButtons').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            // Simular processamento
+            setTimeout(() => {
+                // Salvar confirmação
+                saveConfirmation(status);
+                
+                // Esconder loading
+                document.getElementById('loading').style.display = 'none';
+                
+                // Mostrar mensagem de sucesso
+                if (status === 'confirmed') {
+                    document.getElementById('successMessage').style.display = 'block';
+                } else {
+                    document.getElementById('declineMessage').style.display = 'block';
+                }
+                
+                // Redirecionar após 3 segundos
+                setTimeout(() => {
+                    window.close();
+                }, 3000);
+                
+            }, 1500);
+        }
+
+        function saveConfirmation(status) {
+            const stored = localStorage.getItem('whatsappInvitesData');
+            if (stored) {
+                try {
+                    const data = JSON.parse(stored);
+                    const guests = data.guests || [];
+                    
+                    // Encontrar e atualizar o convidado
+                    const guest = guests.find(g => g.id === guestId);
+                    if (guest) {
+                        guest.status = status;
+                        
+                        // Salvar dados atualizados
+                        data.guests = guests;
+                        localStorage.setItem('whatsappInvitesData', JSON.stringify(data));
+                    }
+                } catch (error) {
+                    console.error('Erro ao salvar confirmação:', error);
+                }
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('eventDetails').innerHTML = `
+                <p style="color: #dc3545; font-weight: 600;">${message}</p>
+            `;
+            document.getElementById('confirmationButtons').style.display = 'none';
+        }
+
+        // Carregar dados quando a página carregar
+        document.addEventListener('DOMContentLoaded', loadEventData);
+    </script>
+</body>
+</html> 
