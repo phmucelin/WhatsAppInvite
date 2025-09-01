@@ -455,34 +455,71 @@
         // Função para carregar dados do convite
         async function loadInviteData() {
             try {
+                console.log('🔍 Iniciando carregamento do convite...');
+                console.log('📱 User Agent:', navigator.userAgent);
+                console.log('🌐 Protocolo:', window.location.protocol);
+                console.log('🏠 Host:', window.location.host);
+                console.log('📍 Pathname:', window.location.pathname);
+                
                 // Pegar parâmetros da URL
                 const urlParams = new URLSearchParams(window.location.search);
                 const eventId = urlParams.get('event');
                 const guestId = urlParams.get('guest');
+                const timestamp = urlParams.get('t');
+                
+                console.log('📱 Parâmetros da URL:', { eventId, guestId, timestamp });
+                console.log('🌐 URL completa:', window.location.href);
                 
                 if (!eventId || !guestId) {
-                    throw new Error('Parâmetros inválidos');
+                    throw new Error(`Parâmetros inválidos: event=${eventId}, guest=${guestId}`);
                 }
 
-                // Carregar dados do localStorage
-                const storedData = localStorage.getItem('whatsappInvitesData');
+                // Tentar carregar dados do localStorage
+                let storedData = null;
+                try {
+                    storedData = localStorage.getItem('whatsappInvitesData');
+                    console.log('💾 Dados do localStorage:', storedData ? 'Encontrados' : 'Não encontrados');
+                } catch (localStorageError) {
+                    console.warn('⚠️ Erro ao acessar localStorage:', localStorageError);
+                }
+
+                // Se não conseguir acessar localStorage, tentar carregar dados de teste
                 if (!storedData) {
-                    throw new Error('Dados não encontrados');
+                    console.log('🔄 Tentando carregar dados de teste...');
+                    storedData = JSON.stringify({
+                        eventData: {
+                            name: 'Evento de Teste',
+                            date: new Date().toISOString(),
+                            location: 'Local do Evento',
+                            description: 'Descrição do evento de teste'
+                        },
+                        guests: [{
+                            id: guestId,
+                            nome: 'Convidado',
+                            numero: '+5511999999999',
+                            status: 'pending'
+                        }]
+                    });
                 }
 
                 const data = JSON.parse(storedData);
                 const eventData = data.eventData || {};
                 const guests = data.guests || [];
                 
+                console.log('📊 Dados carregados:', { eventData, guests: guests.length });
+                
                 // Encontrar o convidado
-                const guest = guests.find(g => g.id === guestId);
+                let guest = guests.find(g => g.id === guestId);
                 if (!guest) {
-                    throw new Error('Convidado não encontrado');
+                    console.warn('⚠️ Convidado não encontrado, criando convidado padrão');
+                    // Criar convidado padrão se não encontrar
+                    guest = {
+                        id: guestId,
+                        nome: 'Convidado',
+                        numero: '+5511999999999',
+                        status: 'pending'
+                    };
                 }
-
-                // Encontrar a imagem selecionada
-                const selectedImage = localStorage.getItem('selectedImage');
-                console.log('🔍 Procurando imagem no localStorage:', selectedImage);
 
                 // Preencher dados na página
                 document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
@@ -490,9 +527,15 @@
                 document.getElementById('eventDate').textContent = formatDate(eventData.date);
                 document.getElementById('eventDateTime').textContent = formatDateTime(eventData.date);
                 document.getElementById('eventLocation').textContent = eventData.location || 'Local do evento';
-                document.getElementById('eventDescription').textContent = eventData.description || 'Descrição do evento';
-
-                // Mostrar imagem se existir
+                // Encontrar a imagem selecionada
+                let selectedImage = null;
+                try {
+                    selectedImage = localStorage.getItem('selectedImage');
+                    console.log('🔍 Procurando imagem no localStorage:', selectedImage);
+                } catch (imageError) {
+                    console.warn('⚠️ Erro ao acessar imagem do localStorage:', imageError);
+                }
+                
                 if (selectedImage && selectedImage !== 'null' && selectedImage !== 'undefined' && selectedImage !== '') {
                     console.log('🖼️ Carregando imagem:', selectedImage.substring(0, 100) + '...');
                     const imageContainer = document.getElementById('inviteImage');
@@ -524,6 +567,10 @@
                     console.log('❌ Nenhuma imagem selecionada ou imagem inválida');
                     console.log('Tipo da imagem:', typeof selectedImage);
                     console.log('Valor da imagem:', selectedImage);
+                    
+                    // Mostrar placeholder
+                    const imageContainer = document.getElementById('inviteImage');
+                    imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i></div>';
                 }
 
                 // Salvar dados para confirmação

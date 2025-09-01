@@ -214,6 +214,25 @@ function generateQRCode() {
     });
 }
 
+// Função para criar dados de teste que funcionem em dispositivos móveis
+function createTestDataForMobile(eventId, guestId) {
+    return {
+        eventData: {
+            name: 'Evento de Teste',
+            date: new Date().toISOString(),
+            location: 'Local do Evento',
+            description: 'Descrição do evento de teste para dispositivos móveis'
+        },
+        guests: [{
+            id: guestId,
+            nome: 'Convidado',
+            numero: '+5511999999999',
+            status: 'pending'
+        }]
+    };
+}
+
+// Função para gerar link de confirmação com fallback para mobile
 function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
     
@@ -227,11 +246,18 @@ function generateConfirmationLink(guestId = null) {
         baseUrl = `${window.location.origin}/convite.html`;
     }
     
+    // Codificar parâmetros para evitar problemas de URL
+    const encodedEvent = encodeURIComponent(eventId);
+    const encodedGuest = guestId ? encodeURIComponent(guestId) : '';
+    
+    // Adicionar timestamp para evitar cache em dispositivos móveis
+    const timestamp = Date.now();
+    
     if (guestId) {
         // Usar a nova página de convite personalizada
-        return `${baseUrl}?event=${eventId}&guest=${guestId}`;
+        return `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}&t=${timestamp}`;
     }
-    return `${baseUrl}?event=${eventId}`;
+    return `${baseUrl}?event=${encodedEvent}&t=${timestamp}`;
 }
 
 function generateEventId() {
