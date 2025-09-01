@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎉 Convite Personalizado</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .invite-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            max-width: 500px;
+            width: 100%;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .invite-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .invite-header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .invite-header .event-date {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .invite-image {
+            width: 100%;
+            height: 250px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .invite-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .invite-image .placeholder {
+            color: #6c757d;
+            font-size: 3rem;
+            opacity: 0.5;
+        }
+
+        .invite-content {
+            padding: 30px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-item i {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-right: 15px;
+            width: 30px;
+            text-align: center;
+        }
+
+        .info-item .info-text h3 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .info-item .info-text p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .confirmation-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-confirm {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #218838;
+        }
+
+        .btn-decline {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-decline:hover {
+            background: #c82333;
+        }
+
+        .guest-name {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .loading i {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .invite-container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .invite-header {
+                padding: 20px;
+            }
+            
+            .invite-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .confirmation-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invite-container">
+        <!-- Loading inicial -->
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner"></i>
+            <p>Carregando convite...</p>
+        </div>
+
+        <!-- Conteúdo do convite (inicialmente oculto) -->
+        <div id="inviteContent" style="display: none;">
+            <!-- Nome do convidado -->
+            <div class="guest-name" id="guestName">
+                Olá, Convidado!
+            </div>
+
+            <!-- Header do convite -->
+            <div class="invite-header">
+                <h1 id="eventName">Nome do Evento</h1>
+                <div class="event-date" id="eventDate">Data do evento</div>
+            </div>
+
+            <!-- Imagem do convite -->
+            <div class="invite-image" id="inviteImage">
+                <div class="placeholder">
+                    <i class="fas fa-image"></i>
+                </div>
+            </div>
+
+            <!-- Informações do evento -->
+            <div class="invite-content">
+                <div class="info-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <div class="info-text">
+                        <h3>Data e Hora</h3>
+                        <p id="eventDateTime">Data e hora do evento</p>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div class="info-text">
+                        <h3>Local</h3>
+                        <p id="eventLocation">Local do evento</p>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="info-text">
+                        <h3>Descrição</h3>
+                        <p id="eventDescription">Descrição do evento</p>
+                    </div>
+                </div>
+
+                <!-- Botões de confirmação -->
+                <div class="confirmation-buttons">
+                    <button class="btn btn-confirm" onclick="confirmPresence('confirmed')">
+                        <i class="fas fa-check"></i> Confirmar Presença
+                    </button>
+                    <button class="btn btn-decline" onclick="confirmPresence('declined')">
+                        <i class="fas fa-times"></i> Não Posso Ir
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensagem de erro -->
+        <div id="errorMessage" class="error" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Erro ao carregar o convite. Verifique se o link está correto.</p>
+        </div>
+    </div>
+
+    <script>
+        // Função para carregar dados do convite
+        async function loadInviteData() {
+            try {
+                // Pegar parâmetros da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                const guestId = urlParams.get('guest');
+                
+                if (!eventId || !guestId) {
+                    throw new Error('Parâmetros inválidos');
+                }
+
+                // Carregar dados do localStorage
+                const storedData = localStorage.getItem('whatsappInvitesData');
+                if (!storedData) {
+                    throw new Error('Dados não encontrados');
+                }
+
+                const data = JSON.parse(storedData);
+                const eventData = data.eventData || {};
+                const guests = data.guests || [];
+                
+                // Encontrar o convidado
+                const guest = guests.find(g => g.id === guestId);
+                if (!guest) {
+                    throw new Error('Convidado não encontrado');
+                }
+
+                // Encontrar a imagem selecionada
+                const selectedImage = localStorage.getItem('selectedImage');
+
+                // Preencher dados na página
+                document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
+                document.getElementById('eventName').textContent = eventData.name || 'Nome do Evento';
+                document.getElementById('eventDate').textContent = formatDate(eventData.date);
+                document.getElementById('eventDateTime').textContent = formatDateTime(eventData.date);
+                document.getElementById('eventLocation').textContent = eventData.location || 'Local do evento';
+                document.getElementById('eventDescription').textContent = eventData.description || 'Descrição do evento';
+
+                // Mostrar imagem se existir
+                if (selectedImage) {
+                    const imageContainer = document.getElementById('inviteImage');
+                    imageContainer.innerHTML = `<img src="${selectedImage}" alt="Convite">`;
+                }
+
+                // Salvar dados para confirmação
+                window.inviteData = {
+                    eventId: eventId,
+                    guestId: guestId,
+                    guest: guest,
+                    eventData: eventData
+                };
+
+                // Mostrar conteúdo e esconder loading
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('inviteContent').style.display = 'block';
+
+            } catch (error) {
+                console.error('Erro ao carregar convite:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        // Função para confirmar presença
+        function confirmPresence(status) {
+            try {
+                const inviteData = window.inviteData;
+                if (!inviteData) {
+                    alert('Erro: Dados do convite não encontrados');
+                    return;
+                }
+
+                // Carregar dados salvos
+                const storedData = localStorage.getItem('whatsappInvitesData');
+                if (storedData) {
+                    const data = JSON.parse(storedData);
+                    const guests = data.guests || [];
+                    
+                    // Encontrar e atualizar o convidado
+                    const guest = guests.find(g => g.id === inviteData.guestId);
+                    if (guest) {
+                        guest.status = status;
+                        
+                        // Salvar dados atualizados
+                        data.guests = guests;
+                        localStorage.setItem('whatsappInvitesData', JSON.stringify(data));
+                        
+                        // Salvar timestamp de atualização
+                        const updateData = {
+                            guestId: inviteData.guestId,
+                            status: status,
+                            timestamp: Date.now()
+                        };
+                        localStorage.setItem('lastConfirmationUpdate', JSON.stringify(updateData));
+                        
+                        // Notificar página principal se estiver na mesma sessão
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'confirmation_update',
+                                guestId: inviteData.guestId,
+                                status: status,
+                                guestName: guest.nome
+                            }, '*');
+                        }
+                    }
+                }
+
+                // Mostrar confirmação
+                const isConfirmed = status === 'confirmed';
+                const message = isConfirmed 
+                    ? 'Presença confirmada! Obrigado!' 
+                    : 'Entendido. Obrigado pela resposta!';
+                
+                const icon = isConfirmed ? '✅' : '❌';
+                const color = isConfirmed ? '#28a745' : '#dc3545';
+                
+                // Substituir conteúdo da página
+                document.body.innerHTML = `
+                    <div style="
+                        min-height: 100vh;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        padding: 20px;
+                    ">
+                        <div style="
+                            background: white;
+                            padding: 40px;
+                            border-radius: 20px;
+                            text-align: center;
+                            max-width: 400px;
+                            width: 100%;
+                            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                            animation: fadeIn 0.5s ease-in;
+                        ">
+                            <div style="
+                                font-size: 4rem;
+                                margin-bottom: 20px;
+                                animation: bounce 1s ease-in-out;
+                            ">
+                                ${icon}
+                            </div>
+                            <h3 style="color: ${color}; margin-bottom: 20px; font-size: 1.5rem;">
+                                ${isConfirmed ? 'Presença Confirmada!' : 'Resposta Registrada!'}
+                            </h3>
+                            <p style="font-size: 1.1rem; margin-bottom: 20px; color: #333;">
+                                ${message}
+                            </p>
+                            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">
+                                Você pode fechar esta página.
+                            </p>
+                            <button onclick="window.close()" 
+                                    style="
+                                        background: #667eea;
+                                        color: white;
+                                        border: none;
+                                        padding: 10px 20px;
+                                        border-radius: 8px;
+                                        cursor: pointer;
+                                        font-weight: 600;
+                                    ">
+                                Fechar Página
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <style>
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(20px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        @keyframes bounce {
+                            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                            40% { transform: translateY(-10px); }
+                            60% { transform: translateY(-5px); }
+                        }
+                    </style>
+                `;
+
+            } catch (error) {
+                console.error('Erro ao confirmar presença:', error);
+                alert('Erro ao confirmar presença. Tente novamente.');
+            }
+        }
+
+        // Funções utilitárias
+        function formatDate(dateString) {
+            if (!dateString) return 'Data não definida';
+            
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        function formatDateTime(dateString) {
+            if (!dateString) return 'Data e hora não definidas';
+            
+            const date = new Date(dateString);
+            return date.toLocaleString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Carregar dados quando a página carregar
+        document.addEventListener('DOMContentLoaded', loadInviteData);
+    </script>
+</body>
+</html> 

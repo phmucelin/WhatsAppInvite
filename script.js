@@ -214,9 +214,10 @@ function generateQRCode() {
 function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
     if (guestId) {
-        return `${window.location.origin}${window.location.pathname}?event=${eventId}&guest=${guestId}&confirm=true`;
+        // Usar a nova página de convite personalizada
+        return `${window.location.origin}/convite.html?event=${eventId}&guest=${guestId}`;
     }
-    return `${window.location.origin}${window.location.pathname}?event=${eventId}&confirm=true`;
+    return `${window.location.origin}/convite.html?event=${eventId}`;
 }
 
 function generateEventId() {
@@ -265,7 +266,7 @@ function showWhatsAppModal() {
     } else {
         document.getElementById('apiStatus').style.display = 'none';
         document.getElementById('manualStatus').style.display = 'block';
-        document.getElementById('openWhatsApp').innerHTML = '<i class="fab fa-whatsapp"></i> Abrir WhatsApp Web';
+        document.getElementById('openWhatsApp').innerHTML = '<i class="fab fa-whatsapp"></i> Preparar Mensagens';
     }
     
     document.getElementById('whatsappModal').classList.remove('hidden');
@@ -338,6 +339,14 @@ function createMessageInterface(messages) {
     
     modalContent.innerHTML = `
         <h3><i class="fab fa-whatsapp"></i> Envio de Mensagens WhatsApp</h3>
+        <p style="margin-bottom: 20px;">
+            <strong>🎉 NOVO: Páginas Personalizadas!</strong><br>
+            Cada convidado receberá um link único que abre uma página com:<br>
+            ✅ <strong>Imagem do convite</strong> (se selecionada)<br>
+            ✅ <strong>Informações completas</strong> do evento<br>
+            ✅ <strong>Botões de confirmação</strong> direto na página<br>
+            ✅ <strong>Experiência profissional</strong> para seus convidados!
+        </p>
         <p style="margin-bottom: 20px;">
             <strong>Instruções de Envio:</strong><br>
             <strong>Opção 1 - Envio Direto:</strong> Clique em "Enviar" para cada convidado - isso abrirá o WhatsApp com a mensagem pronta<br>
