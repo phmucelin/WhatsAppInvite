@@ -334,7 +334,7 @@ function createMessageInterface(messages) {
     
     const modalContent = document.createElement('div');
     modalContent.className = 'modal-content message-modal';
-    modalContent.style.maxWidth = '800px';
+    modalContent.style.maxWidth = '900px';
     modalContent.style.width = '95%';
     
     modalContent.innerHTML = `
@@ -347,20 +347,24 @@ function createMessageInterface(messages) {
             ✅ <strong>Botões de confirmação</strong> direto na página<br>
             ✅ <strong>Experiência profissional</strong> para seus convidados!
         </p>
-        <p style="margin-bottom: 20px;">
-            <strong>Instruções de Envio:</strong><br>
-            <strong>Opção 1 - Envio Direto:</strong> Clique em "Enviar" para cada convidado - isso abrirá o WhatsApp com a mensagem pronta<br>
-            <strong>Opção 2 - Copiar e Colar:</strong> Clique em "Copiar" e cole a mensagem no WhatsApp Web manualmente<br>
-            <strong>Opção 3 - Envio em Massa:</strong> Use "Enviar Todas" para abrir o WhatsApp Web e enviar todas as mensagens
-        </p>
         
-        <div class="messages-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196f3;">
+            <strong>📱 Como Enviar:</strong><br>
+            • <strong>Seleção Individual:</strong> Marque os convidados que deseja enviar<br>
+            • <strong>Envio em Lote:</strong> Clique em "Enviar Selecionados" para abrir WhatsApp Web<br>
+            • <strong>Envio Individual:</strong> Clique em "Enviar" para cada convidado específico
+        </div>
+        
+        <div class="messages-container" style="max-height: 500px; overflow-y: auto; margin-bottom: 20px;">
             ${messages.map((msg, index) => `
-                <div class="message-item" style="border: 1px solid #e1e5e9; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                <div class="message-item" data-guest-id="${msg.guest.id}" style="border: 1px solid #e1e5e9; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <div>
-                            <strong>${msg.guest.nome}</strong>
-                            <span style="color: #666; margin-left: 10px;">${msg.phone}</span>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <input type="checkbox" id="guest_${msg.guest.id}" class="guest-checkbox" checked style="transform: scale(1.2);">
+                            <div>
+                                <strong>${msg.guest.nome}</strong>
+                                <span style="color: #666; margin-left: 10px;">${msg.phone}</span>
+                            </div>
                         </div>
                         <div style="display: flex; gap: 8px;">
                             <button onclick="copyMessageToClipboard(\`${msg.message.replace(/`/g, '\\`')}\`)" 
@@ -368,7 +372,7 @@ function createMessageInterface(messages) {
                                     style="background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">
                                 <i class="fas fa-copy"></i> Copiar
                             </button>
-                            <button onclick="sendSingleMessage('${msg.phone}', \`${msg.message.replace(/`/g, '\\`')}\`)" 
+                            <button onclick="sendSingleMessage('${msg.phone}', \`${msg.message.replace(/`/g, '\\`')}\`, '${msg.guest.id}')" 
                                     class="btn-send-single" 
                                     style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
                                 <i class="fab fa-whatsapp"></i> Enviar
@@ -378,34 +382,65 @@ function createMessageInterface(messages) {
                     <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 0.9rem; max-height: 100px; overflow-y: auto;">
                         ${msg.message.replace(/\n/g, '<br>')}
                     </div>
+                    <div class="message-status" id="status_${msg.guest.id}" style="margin-top: 10px; padding: 8px; border-radius: 5px; background: #f8f9fa; color: #666; font-size: 0.9rem; text-align: center; display: none;">
+                        ⏳ Aguardando envio...
+                    </div>
                 </div>
             `).join('')}
         </div>
         
-        <div style="text-align: center;">
-            <button onclick="sendAllMessages()" class="btn-send-all-messages" 
-                    style="background: #667eea; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 10px;">
-                <i class="fas fa-paper-plane"></i> Enviar Todas (Abrir WhatsApp)
-            </button>
-            <button onclick="closeMessageModal()" class="btn-secondary">
-                Fechar
-            </button>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="margin-bottom: 15px;">
+                <button onclick="selectAllGuests()" class="btn" style="background: #6c757d; margin-right: 10px;">
+                    <i class="fas fa-check-square"></i> Selecionar Todos
+                </button>
+                <button onclick="deselectAllGuests()" class="btn" style="background: #6c757d;">
+                    <i class="fas fa-square"></i> Desmarcar Todos
+                </button>
+            </div>
+            <div>
+                <button onclick="sendSelectedMessages()" class="btn-send-selected" 
+                        style="background: #667eea; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 10px; font-size: 1.1rem;">
+                    <i class="fas fa-paper-plane"></i> Enviar Selecionados (${messages.length} convidados)
+                </button>
+                <button onclick="closeMessageModal()" class="btn-secondary">
+                    Fechar
+                </button>
+            </div>
         </div>
     `;
     
     modal.appendChild(modalContent);
     document.body.appendChild(modal);
     
+    // Adicionar listeners para checkboxes
+    const checkboxes = modal.querySelectorAll('.guest-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCounter);
+    });
+    
+    // Atualizar contador inicial
+    updateSelectedCounter();
+    
     // Salvar mensagens globalmente
     window.preparedMessages = messages;
 }
 
-function sendSingleMessage(phone, message) {
+function sendSingleMessage(phone, message, guestId) {
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
     
     // Marcar como enviado
-    markAsSent(phone);
+    markAsSent(phone, guestId);
+    
+    // Mostrar status
+    const statusElement = document.getElementById(`status_${guestId}`);
+    if (statusElement) {
+        statusElement.style.display = 'block';
+        statusElement.style.background = '#d4edda';
+        statusElement.style.color = '#155724';
+        statusElement.innerHTML = '✅ Enviado via WhatsApp';
+    }
 }
 
 function copyMessageToClipboard(message) {
@@ -449,21 +484,25 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-function markAsSent(phone) {
+function markAsSent(phone, guestId) {
     // Encontrar o botão correspondente e desabilitar
-    const messageItems = document.querySelectorAll('.message-item');
-    messageItems.forEach(item => {
-        const phoneSpan = item.querySelector('span');
-        if (phoneSpan && phoneSpan.textContent.includes(phone)) {
-            const sendButton = item.querySelector('.btn-send-single');
-            if (sendButton) {
-                sendButton.disabled = true;
-                sendButton.style.background = '#6c757d';
-                sendButton.innerHTML = '<i class="fas fa-check"></i> Enviado';
-                sendButton.style.cursor = 'not-allowed';
-            }
+    const messageItem = document.querySelector(`[data-guest-id="${guestId}"]`);
+    if (messageItem) {
+        const sendButton = messageItem.querySelector('.btn-send-single');
+        if (sendButton) {
+            sendButton.disabled = true;
+            sendButton.style.background = '#6c757d';
+            sendButton.innerHTML = '<i class="fas fa-check"></i> Enviado';
+            sendButton.style.cursor = 'not-allowed';
         }
-    });
+        
+        // Desmarcar checkbox
+        const checkbox = messageItem.querySelector('.guest-checkbox');
+        if (checkbox) {
+            checkbox.checked = false;
+            checkbox.disabled = true;
+        }
+    }
     
     // Atualizar contador de enviados
     updateSentCounter();
@@ -478,6 +517,61 @@ function updateSentCounter() {
     const modalTitle = document.querySelector('#messageModal h3');
     if (modalTitle) {
         modalTitle.innerHTML = `<i class="fab fa-whatsapp"></i> Envio de Mensagens WhatsApp (${sentCount}/${totalMessages} enviadas)`;
+    }
+    
+    // Atualizar contador de selecionados
+    updateSelectedCounter();
+}
+
+// Função para selecionar todos os convidados
+function selectAllGuests() {
+    const checkboxes = document.querySelectorAll('.guest-checkbox');
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.disabled) {
+            checkbox.checked = true;
+        }
+    });
+    updateSelectedCounter();
+}
+
+// Função para desmarcar todos os convidados
+function deselectAllGuests() {
+    const checkboxes = document.querySelectorAll('.guest-checkbox');
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.disabled) {
+            checkbox.checked = false;
+        }
+    });
+    updateSelectedCounter();
+}
+
+// Função para enviar mensagens selecionadas
+function sendSelectedMessages() {
+    const selectedCheckboxes = document.querySelectorAll('.guest-checkbox:checked:not(:disabled)');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Por favor, selecione pelo menos um convidado para enviar.');
+        return;
+    }
+    
+    // Abrir WhatsApp Web
+    window.open('https://web.whatsapp.com/', '_blank');
+    
+    // Mostrar instruções
+    alert(`WhatsApp Web foi aberto!\n\n📱 Você selecionou ${selectedCheckboxes.length} convidado(s).\n\n💡 Agora você pode:\n1. Usar os botões "Enviar" individuais para cada convidado selecionado\n2. Ou copiar e colar as mensagens manualmente no WhatsApp Web\n\n✅ Os convidados não selecionados permanecerão disponíveis para envio posterior.`);
+    
+    // Atualizar contador
+    updateSelectedCounter();
+}
+
+// Função para atualizar contador de selecionados
+function updateSelectedCounter() {
+    const selectedCount = document.querySelectorAll('.guest-checkbox:checked:not(:disabled)').length;
+    const totalCount = document.querySelectorAll('.guest-checkbox:not(:disabled)').length;
+    
+    const sendButton = document.querySelector('.btn-send-selected');
+    if (sendButton) {
+        sendButton.innerHTML = `<i class="fas fa-paper-plane"></i> Enviar Selecionados (${selectedCount}/${totalCount})`;
     }
 }
 

@@ -330,9 +330,12 @@
                 document.getElementById('eventDescription').textContent = eventData.description || 'Descrição do evento';
 
                 // Mostrar imagem se existir
-                if (selectedImage) {
+                if (selectedImage && selectedImage !== 'null' && selectedImage !== 'undefined') {
+                    console.log('🖼️ Carregando imagem:', selectedImage);
                     const imageContainer = document.getElementById('inviteImage');
-                    imageContainer.innerHTML = `<img src="${selectedImage}" alt="Convite">`;
+                    imageContainer.innerHTML = `<img src="${selectedImage}" alt="Convite" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\"placeholder\\"><i class=\\"fas fa-image\\"></i></div>';">`;
+                } else {
+                    console.log('❌ Nenhuma imagem selecionada');
                 }
 
                 // Salvar dados para confirmação
