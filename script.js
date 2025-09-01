@@ -253,9 +253,24 @@ function generateConfirmationLink(guestId = null) {
     // Adicionar timestamp para evitar cache em dispositivos móveis
     const timestamp = Date.now();
     
+    // Adicionar nome do convidado se disponível
+    let nameParam = '';
+    if (guestId) {
+        const guest = guests.find(g => g.id === guestId);
+        if (guest && guest.nome) {
+            nameParam = `&name=${encodeURIComponent(guest.nome)}`;
+        }
+    }
+    
+    // Adicionar imagem se disponível
+    let imageParam = '';
+    if (selectedImage) {
+        imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+    }
+    
     if (guestId) {
         // Usar a nova página de convite personalizada
-        return `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}&t=${timestamp}`;
+        return `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}${imageParam}&t=${timestamp}`;
     }
     return `${baseUrl}?event=${encodedEvent}&t=${timestamp}`;
 }

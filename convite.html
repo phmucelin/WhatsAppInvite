@@ -73,7 +73,7 @@
         }
 
         .invite-header {
-            background: linear-gradient(135deg, #0c4a6e 0%, #075985 25%, #0369a1 50%, #0284c7 75%, #0ea5e9 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #475569 75%, #64748b 100%);
             color: white;
             padding: 35px 30px;
             text-align: center;
@@ -520,6 +520,13 @@
                         status: 'pending'
                     };
                 }
+                
+                // Tentar pegar nome da URL se disponível
+                const nameFromUrl = urlParams.get('name');
+                if (nameFromUrl) {
+                    guest.nome = decodeURIComponent(nameFromUrl);
+                    console.log('👤 Nome encontrado na URL:', guest.nome);
+                }
 
                 // Preencher dados na página
                 document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
@@ -527,13 +534,24 @@
                 document.getElementById('eventDate').textContent = formatDate(eventData.date);
                 document.getElementById('eventDateTime').textContent = formatDateTime(eventData.date);
                 document.getElementById('eventLocation').textContent = eventData.location || 'Local do evento';
-                // Encontrar a imagem selecionada
+                // Mostrar imagem se existir
                 let selectedImage = null;
                 try {
                     selectedImage = localStorage.getItem('selectedImage');
                     console.log('🔍 Procurando imagem no localStorage:', selectedImage);
                 } catch (imageError) {
                     console.warn('⚠️ Erro ao acessar imagem do localStorage:', imageError);
+                }
+                
+                // Se não conseguir acessar localStorage, tentar usar dados da URL
+                if (!selectedImage) {
+                    console.log('🔄 Tentando carregar imagem da URL...');
+                    // Tentar pegar imagem da URL como parâmetro
+                    const imageFromUrl = urlParams.get('image');
+                    if (imageFromUrl) {
+                        selectedImage = decodeURIComponent(imageFromUrl);
+                        console.log('🖼️ Imagem encontrada na URL:', selectedImage);
+                    }
                 }
                 
                 if (selectedImage && selectedImage !== 'null' && selectedImage !== 'undefined' && selectedImage !== '') {
