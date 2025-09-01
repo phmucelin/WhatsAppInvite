@@ -24,7 +24,7 @@
             overflow-x: hidden;
         }
 
-        /* Partículas flutuantes animadas */
+        /* Efeito de grade tecnológica sutil */
         body::before {
             content: '';
             position: fixed;
@@ -33,18 +33,17 @@
             width: 100%;
             height: 100%;
             background-image: 
-                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
-            animation: float 20s ease-in-out infinite;
+                linear-gradient(rgba(30, 64, 175, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30, 64, 175, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 30s linear infinite;
             pointer-events: none;
             z-index: -1;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-20px) rotate(120deg); }
-            66% { transform: translateY(20px) rotate(240deg); }
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
         }
 
         .invite-container {
@@ -60,20 +59,16 @@
         @keyframes slideIn {
             0% {
                 opacity: 0;
-                transform: translateY(50px) scale(0.9);
-            }
-            50% {
-                opacity: 0.7;
-                transform: translateY(25px) scale(0.95);
+                transform: translateY(30px);
             }
             100% {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                transform: translateY(0);
             }
         }
 
         .invite-container {
-            animation: slideIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slideIn 0.6s ease-out;
         }
 
         .invite-header {
@@ -88,17 +83,17 @@
         .invite-header::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: shimmer 8s linear infinite;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            animation: subtleShimmer 4s ease-in-out infinite;
         }
 
-        @keyframes shimmer {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes subtleShimmer {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
         }
 
         .invite-header h1 {
@@ -116,23 +111,21 @@
 
         .invite-image {
             width: 100%;
-            min-height: 200px;
-            max-height: 400px;
             background: #f8f9fa;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            overflow: visible;
             border-radius: 10px;
-            margin: 20px 0;
+            margin: 0;
+            padding: 20px;
         }
 
         .invite-image img {
-            width: 100%;
+            max-width: 100%;
             height: auto;
-            max-height: 100%;
-            object-fit: contain;
             border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
         .invite-image .placeholder {
@@ -175,8 +168,8 @@
         }
 
         .info-item:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(30, 64, 175, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 64, 175, 0.2);
             border-left-color: #3b82f6;
         }
 
@@ -192,7 +185,6 @@
 
         .info-item:hover i {
             color: #3b82f6;
-            transform: scale(1.1);
         }
 
         .info-item .info-text h3 {
@@ -239,8 +231,8 @@
         }
 
         .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
         }
 
         .btn-confirm {
@@ -303,36 +295,16 @@
             padding: 15px 25px;
             border-radius: 30px;
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 0;
             font-weight: 700;
             font-size: 1.2rem;
             box-shadow: 0 6px 20px rgba(30, 64, 175, 0.4);
             border: 2px solid #60a5fa;
             position: relative;
             overflow: hidden;
-            animation: pulse 2s ease-in-out infinite;
         }
 
-        .guest-name::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-            animation: rotate 4s linear infinite;
-        }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-        }
-
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
 
         .loading {
             text-align: center;
@@ -521,17 +493,16 @@
                     console.log('🖼️ Carregando imagem:', selectedImage.substring(0, 100) + '...');
                     const imageContainer = document.getElementById('inviteImage');
                     
-                    // Criar elemento de imagem com auto-scaling
+                    // Criar elemento de imagem com 100% aproveitamento
                     const img = document.createElement('img');
                     img.src = selectedImage;
                     img.alt = 'Convite';
                     img.style.cssText = `
-                        width: 100%;
+                        max-width: 100%;
                         height: auto;
-                        max-height: 100%;
-                        object-fit: contain;
                         border-radius: 10px;
                         display: block;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
                     `;
                     
                     // Tratamento de erro
@@ -782,13 +753,13 @@
             
             elements.forEach((element, index) => {
                 element.style.opacity = '0';
-                element.style.transform = 'translateY(30px)';
+                element.style.transform = 'translateY(20px)';
                 
                 setTimeout(() => {
-                    element.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                    element.style.transition = 'all 0.4s ease-out';
                     element.style.opacity = '1';
                     element.style.transform = 'translateY(0)';
-                }, 200 * (index + 1));
+                }, 150 * (index + 1));
             });
         }
 
@@ -855,47 +826,7 @@
             }
         }
 
-        // Função para adicionar efeitos de partículas
-        function addParticleEffects() {
-            const container = document.querySelector('.invite-container');
-            if (container) {
-                // Criar partículas flutuantes
-                for (let i = 0; i < 5; i++) {
-                    const particle = document.createElement('div');
-                    particle.style.cssText = `
-                        position: absolute;
-                        width: 4px;
-                        height: 4px;
-                        background: rgba(30, 64, 175, 0.3);
-                        border-radius: 50%;
-                        pointer-events: none;
-                        animation: particleFloat ${3 + i}s ease-in-out infinite;
-                        animation-delay: ${i * 0.5}s;
-                    `;
-                    
-                    particle.style.left = Math.random() * 100 + '%';
-                    particle.style.top = Math.random() * 100 + '%';
-                    
-                    container.appendChild(particle);
-                }
-                
-                // Adicionar CSS para animação das partículas
-                const style = document.createElement('style');
-                style.textContent = `
-                    @keyframes particleFloat {
-                        0%, 100% { 
-                            transform: translateY(0px) translateX(0px); 
-                            opacity: 0.3;
-                        }
-                        50% { 
-                            transform: translateY(-20px) translateX(10px); 
-                            opacity: 0.8;
-                        }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        }
+
 
         // Carregar dados quando a página carregar
         document.addEventListener('DOMContentLoaded', () => {
@@ -906,7 +837,6 @@
                 addEntranceAnimations();
                 addInteractiveEffects();
                 addLoadingAnimations();
-                addParticleEffects();
             }, 100);
         });
     </script>
