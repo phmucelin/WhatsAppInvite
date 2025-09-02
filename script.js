@@ -314,31 +314,24 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SOLUÇÃO SIMPLES: Sempre incluir imagem comprimida na URL
+    // SOLUÇÃO FUNCIONAL: Usar localStorage com ID único
     let imageParam = '';
     if (selectedImage) {
-        // Comprimir imagem para reduzir tamanho da URL
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        
-        img.onload = function() {
-            const maxWidth = 300; // Reduzir bastante para URL menor
-            const ratio = maxWidth / img.width;
-            canvas.width = maxWidth;
-            canvas.height = img.height * ratio;
+        try {
+            // Gerar ID único para a imagem
+            const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const compressedImage = canvas.toDataURL('image/jpeg', 0.5); // Qualidade baixa para URL menor
+            // Salvar imagem no localStorage com ID único
+            localStorage.setItem('inviteImage_' + imageId, selectedImage);
+            console.log('💾 Imagem salva com ID:', imageId);
             
-            // Atualizar selectedImage com versão comprimida
-            selectedImage = compressedImage;
-            console.log('🖼️ Imagem comprimida para:', compressedImage.length);
-        };
-        img.src = selectedImage;
-        
-        // Incluir imagem comprimida na URL
-        imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+            // Incluir apenas o ID na URL
+            imageParam = `&imageId=${imageId}`;
+            
+        } catch (error) {
+            console.error('❌ Erro ao salvar imagem:', error);
+            // Se der erro, não incluir imagem
+        }
     }
     
     if (guestId) {

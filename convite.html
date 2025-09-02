@@ -346,9 +346,9 @@
                 const eventLocation = urlParams.get('eventLocation');
                 const eventDescription = urlParams.get('eventDescription');
                 const nameFromUrl = urlParams.get('name');
-                const imageFromUrl = urlParams.get('image');
+                const imageIdFromUrl = urlParams.get('imageId');
                 
-                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImage: !!imageFromUrl });
+                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, imageId: imageIdFromUrl });
                 
                 // Criar objeto de dados do evento
                 const eventData = {
@@ -376,36 +376,57 @@
                 document.getElementById('eventLocation').textContent = eventData.location;
                 document.getElementById('eventDescription').textContent = eventData.description;
                 
-                // SOLUÇÃO SIMPLES: Carregar imagem diretamente da URL
-                if (imageFromUrl) {
-                    console.log('🖼️ Carregando imagem da URL...');
+                // SOLUÇÃO FUNCIONAL: Carregar imagem usando ID único
+                if (imageIdFromUrl) {
+                    console.log('🖼️ Carregando imagem usando ID:', imageIdFromUrl);
                     const imageContainer = document.getElementById('inviteImage');
                     
-                    const img = document.createElement('img');
-                    img.src = decodeURIComponent(imageFromUrl);
-                    img.alt = 'Convite';
-                    img.style.cssText = `
-                        max-width: 100%;
-                        height: auto;
-                        border-radius: 10px;
-                        display: block;
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                    `;
-                    
-                    img.onerror = function() {
-                        console.error('❌ Erro ao carregar imagem');
+                    try {
+                        // Tentar carregar imagem do localStorage usando ID
+                        const savedImage = localStorage.getItem('inviteImage_' + imageIdFromUrl);
+                        
+                        if (savedImage && savedImage !== 'null' && savedImage !== 'undefined') {
+                            console.log('✅ Imagem encontrada no localStorage');
+                            
+                            // Criar elemento de imagem
+                            const img = document.createElement('img');
+                            img.src = savedImage;
+                            img.alt = 'Convite';
+                            img.style.cssText = `
+                                max-width: 100%;
+                                height: auto;
+                                border-radius: 10px;
+                                display: block;
+                                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                            `;
+                            
+                            // Tratamento de erro
+                            img.onerror = function() {
+                                console.error('❌ Erro ao carregar imagem');
+                                imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Erro ao carregar imagem</p></div>';
+                            };
+                            
+                            // Tratamento de sucesso
+                            img.onload = function() {
+                                console.log('✅ Imagem carregada com sucesso!');
+                            };
+                            
+                            // Limpar container e adicionar imagem
+                            imageContainer.innerHTML = '';
+                            imageContainer.appendChild(img);
+                            
+                        } else {
+                            console.log('❌ Imagem não encontrada no localStorage');
+                            imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Imagem não encontrada</p></div>';
+                        }
+                        
+                    } catch (error) {
+                        console.error('❌ Erro ao carregar imagem do localStorage:', error);
                         imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Erro ao carregar imagem</p></div>';
-                    };
-                    
-                    img.onload = function() {
-                        console.log('✅ Imagem carregada com sucesso!');
-                    };
-                    
-                    imageContainer.innerHTML = '';
-                    imageContainer.appendChild(img);
+                    }
                     
                 } else {
-                    console.log('❌ Nenhuma imagem na URL');
+                    console.log('❌ Nenhum ID de imagem na URL');
                     const imageContainer = document.getElementById('inviteImage');
                     imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem selecionada</p></div>';
                 }
