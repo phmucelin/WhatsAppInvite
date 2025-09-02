@@ -552,22 +552,13 @@
                 
                 // Priorizar imagem da URL para mobile
                 const imageFromUrl = urlParams.get('image');
-                const imageHashFromUrl = urlParams.get('imageHash');
                 
                 if (imageFromUrl) {
                     selectedImage = decodeURIComponent(imageFromUrl);
                     console.log('🖼️ Imagem encontrada na URL:', selectedImage.substring(0, 100) + '...');
-                } else if (imageHashFromUrl) {
-                    console.log('🖼️ Hash da imagem encontrado na URL:', imageHashFromUrl);
-                    // Para hash, tentar usar localStorage como backup
-                    try {
-                        selectedImage = localStorage.getItem('selectedImage');
-                        console.log('🔄 Usando imagem do localStorage como backup');
-                    } catch (imageError) {
-                        console.warn('⚠️ Erro ao acessar imagem do localStorage:', imageError);
-                    }
+                    console.log('🖼️ Tamanho da imagem:', selectedImage.length);
                 } else {
-                    // Tentar carregar do localStorage
+                    // Tentar carregar do localStorage como backup
                     try {
                         selectedImage = localStorage.getItem('selectedImage');
                         console.log('🔍 Procurando imagem no localStorage:', selectedImage);
@@ -577,7 +568,7 @@
                 }
                 
                 if (selectedImage && selectedImage !== 'null' && selectedImage !== 'undefined' && selectedImage !== '') {
-                    console.log('🖼️ Carregando imagem:', selectedImage.substring(0, 100) + '...');
+                    console.log('🖼️ Carregando imagem...');
                     const imageContainer = document.getElementById('inviteImage');
                     
                     // Criar elemento de imagem com 100% aproveitamento
@@ -595,8 +586,15 @@
                     // Tratamento de erro
                     img.onerror = function() {
                         console.error('❌ Erro ao carregar imagem:', this.src);
+                        console.error('❌ Tamanho da imagem:', this.src.length);
                         this.style.display = 'none';
-                        imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i></div>';
+                        imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Erro ao carregar imagem</p></div>';
+                    };
+                    
+                    // Tratamento de sucesso
+                    img.onload = function() {
+                        console.log('✅ Imagem carregada com sucesso!');
+                        console.log('✅ Dimensões:', this.naturalWidth, 'x', this.naturalHeight);
                     };
                     
                     // Limpar container e adicionar imagem
@@ -610,7 +608,7 @@
                     
                     // Mostrar placeholder
                     const imageContainer = document.getElementById('inviteImage');
-                    imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i></div>';
+                    imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem selecionada</p></div>';
                 }
 
                 // Salvar dados para confirmação

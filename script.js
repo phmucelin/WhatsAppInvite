@@ -232,6 +232,50 @@ function createTestDataForMobile(eventId, guestId) {
     };
 }
 
+// Função para comprimir imagem automaticamente
+function compressImage(imageDataUrl, maxWidth = 800, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = function() {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Calcular proporção para manter aspect ratio
+                const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+                const newWidth = img.width * ratio;
+                const newHeight = img.height * ratio;
+                
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                
+                // Desenhar imagem redimensionada
+                ctx.drawImage(img, 0, 0, newWidth, newHeight);
+                
+                // Comprimir com qualidade especificada
+                const compressedImage = canvas.toDataURL('image/jpeg', quality);
+                
+                console.log('🖼️ Imagem comprimida:', {
+                    original: imageDataUrl.length,
+                    compressed: compressedImage.length,
+                    reduction: Math.round((1 - compressedImage.length / imageDataUrl.length) * 100) + '%'
+                });
+                
+                resolve(compressedImage);
+            } catch (error) {
+                console.error('❌ Erro ao comprimir imagem:', error);
+                reject(error);
+            }
+        };
+        
+        img.onerror = function() {
+            reject(new Error('Erro ao carregar imagem para compressão'));
+        };
+        
+        img.src = imageDataUrl;
+    });
+}
+
 // Função para gerar link de confirmação com fallback para mobile
 function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
@@ -277,20 +321,46 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // Adicionar imagem na URL para mobile (convertida para base64 se necessário)
+    // SEMPRE incluir imagem na URL para mobile (convertida para base64)
     let imageParam = '';
     if (selectedImage) {
-        // Se a imagem for muito longa, usar apenas um hash
-        if (selectedImage.length > 500) {
-            imageParam = `&imageHash=${btoa(selectedImage.substring(0, 100)).substring(0, 20)}`;
-        } else {
-            imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+        try {
+            // Se a imagem for data URL (base64), usar diretamente
+            if (selectedImage.startsWith('data:image/')) {
+                // Para imagens muito grandes, comprimir automaticamente
+                if (selectedImage.length > 100000) {
+                    console.log('🖼️ Imagem muito grande, comprimindo automaticamente...');
+                    // Usar compressão automática
+                    compressImage(selectedImage, 800, 0.8)
+                        .then(compressedImage => {
+                            console.log('✅ Imagem comprimida com sucesso!');
+                            // Atualizar selectedImage com versão comprimida
+                            selectedImage = compressedImage;
+                        })
+                        .catch(error => {
+                            console.error('❌ Erro na compressão:', error);
+                            // Usar imagem original se compressão falhar
+                        });
+                }
+                
+                imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+                console.log('🖼️ Imagem incluída na URL (base64)');
+            } else {
+                // Se for URL externa, incluir como está
+                imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+                console.log('🖼️ Imagem incluída na URL (URL externa)');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao processar imagem:', error);
+            // Se der erro, não incluir imagem
         }
     }
     
     if (guestId) {
         // Usar a nova página de convite personalizada
-        return `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}${eventParams}${imageParam}&t=${timestamp}`;
+        const finalUrl = `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}${eventParams}${imageParam}&t=${timestamp}`;
+        console.log('🔗 URL gerada:', finalUrl.substring(0, 200) + '...');
+        return finalUrl;
     }
     return `${baseUrl}?event=${encodedEvent}&t=${timestamp}`;
 }
