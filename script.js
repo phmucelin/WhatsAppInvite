@@ -4,11 +4,6 @@ let eventData = {};
 let confirmationLinks = {};
 let selectedImage = null; // Garantir que está definida globalmente
 
-// Sistema de banco de dados local
-const dbName = 'WhatsAppInvitesDB';
-const dbVersion = 1;
-let db = null;
-
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
@@ -27,11 +22,8 @@ function initializeApp() {
     // Carregar imagem salva do localStorage
     loadSavedImage();
     
-    // Inicializar banco de dados e carregar dados salvos
-    loadDataFromDB();
-    
     // Atualizar preview inicial
-    updateInvitePreview();
+    updateDashboard();
 }
 
 function setupEventListeners() {
@@ -69,27 +61,20 @@ function setupEventListeners() {
     });
     
     // Listener para atualizações de confirmação em tempo real
-    window.addEventListener('message', async function(event) {
+    window.addEventListener('message', function(event) {
         if (event.data.type === 'confirmation_update') {
-            try {
-                // Atualizar no banco de dados
-                const success = await updateGuestStatus(event.data.guestId, event.data.status);
+            // Atualizar o convidado localmente
+            const guest = guests.find(g => g.id === event.data.guestId);
+            if (guest) {
+                guest.status = event.data.status;
+                saveData();
+                updateDashboard();
                 
-                if (success) {
-                    // Recarregar dados do banco
-                    guests = await getGuestsFromDB();
-                    
-                    // Atualizar dashboard
-                    updateDashboard();
-                    
-                    // Mostrar notificação
-                    showNotification(
-                        `${event.data.guestName || 'Convidado'} ${event.data.status === 'confirmed' ? 'confirmou' : 'não confirmou'} presença!`, 
-                        'success'
-                    );
-                }
-            } catch (error) {
-                console.error('❌ Erro ao processar confirmação:', error);
+                // Mostrar notificação
+                showNotification(
+                    `${event.data.guestName || 'Convidado'} ${event.data.status === 'confirmed' ? 'confirmou' : 'não confirmou'} presença!`, 
+                    'success'
+                );
             }
         }
     });
@@ -117,54 +102,25 @@ function handleCSVUpload(event) {
 }
 
 function parseCSVData(csvText) {
-    try {
-        const lines = csvText.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
-        
-        // Encontrar índices das colunas
-        const nameIndex = headers.findIndex(h => h.toLowerCase().includes('nome') || h.toLowerCase().includes('name'));
-        const phoneIndex = headers.findIndex(h => h.toLowerCase().includes('telefone') || h.toLowerCase().includes('phone') || h.toLowerCase().includes('numero') || h.toLowerCase().includes('number'));
-        
-        if (nameIndex === -1) {
-            throw new Error('Coluna "Nome" não encontrada no CSV');
+    const lines = csvText.split('\n');
+    guests = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+            const values = lines[i].split(',').map(v => v.trim());
+            const guest = {
+                nome: values[0] || '',
+                numero: values[1] || '',
+                status: 'pending',
+                id: generateGuestId()
+            };
+            guests.push(guest);
         }
-        
-        // Processar linhas de dados
-        guests = [];
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line) {
-                const values = line.split(',').map(v => v.trim());
-                const nome = values[nameIndex];
-                const numero = phoneIndex !== -1 ? values[phoneIndex] : '';
-                
-                if (nome && nome !== 'Nome' && nome !== '') {
-                    guests.push({
-                        id: generateGuestId(),
-                        nome: nome,
-                        numero: numero,
-                        status: 'pending',
-                        sent: false
-                    });
-                }
-            }
-        }
-        
-        console.log(`✅ ${guests.length} convidados carregados do CSV`);
-        
-        // Salvar no banco de dados
-        const eventId = generateEventId();
-        saveGuestsToDB(guests, eventId);
-        
-        // Salvar também no localStorage para compatibilidade
-        saveData();
-        
-        updateDashboard();
-        
-    } catch (error) {
-        console.error('❌ Erro ao processar CSV:', error);
-        alert('Erro ao processar arquivo CSV: ' + error.message);
     }
+    
+    displayGuestsPreview();
+    saveData();
+    updateDashboard();
 }
 
 function displayGuestsPreview() {
@@ -315,7 +271,7 @@ function compressImage(imageDataUrl, maxWidth = 800, quality = 0.8) {
 }
 
 // Função para gerar link de confirmação com fallback para mobile
-async function generateConfirmationLink(guestId = null) {
+function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
     
     // Detectar se está rodando localmente ou em servidor
@@ -351,16 +307,16 @@ async function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SOLUÇÃO REAL: Usar IndexedDB para imagens (sem limite de quota)
+    // SOLUÇÃO SIMPLES: Usar localStorage com ID único
     let imageParam = '';
     if (selectedImage) {
         try {
             // Gerar ID único para a imagem
             const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
-            // Salvar imagem no IndexedDB (sem limite de quota)
-            await saveImageToDB(imageId, selectedImage);
-            console.log('💾 Imagem salva no IndexedDB:', imageId);
+            // Salvar imagem no localStorage com ID único
+            localStorage.setItem(imageId, selectedImage);
+            console.log('💾 Imagem salva com ID:', imageId);
             
             // Incluir apenas o ID na URL
             imageParam = `&imageKey=${imageId}`;
@@ -1551,182 +1507,4 @@ function confirmPresence(guestId, status) {
 }
 
 // Inicializar verificação de confirmação
-checkConfirmationPage();
-
-// Inicializar banco de dados
-function initDatabase() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName, dbVersion);
-        
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            db = request.result;
-            resolve(db);
-        };
-        
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            
-            // Store para convidados
-            if (!db.objectStoreNames.contains('guests')) {
-                const guestStore = db.createObjectStore('guests', { keyPath: 'id' });
-                guestStore.createIndex('status', 'status', { unique: false });
-                guestStore.createIndex('eventId', 'eventId', { unique: false });
-            }
-            
-            // Store para eventos
-            if (!db.objectStoreNames.contains('events')) {
-                const eventStore = db.createObjectStore('events', { keyPath: 'id' });
-            }
-            
-            // Store para confirmações
-            if (!db.objectStoreNames.contains('confirmations')) {
-                const confirmationStore = db.createObjectStore('confirmations', { keyPath: 'id', autoIncrement: true });
-                confirmationStore.createIndex('guestId', 'guestId', { unique: false });
-                confirmationStore.createIndex('timestamp', 'timestamp', { unique: false });
-            }
-            
-            // Store para imagens
-            if (!db.objectStoreNames.contains('images')) {
-                const imageStore = db.createObjectStore('images', { keyPath: 'id' });
-                imageStore.createIndex('timestamp', 'timestamp', { unique: false });
-            }
-        };
-    });
-}
-
-// Salvar convidados no banco
-async function saveGuestsToDB(guestsArray, eventId) {
-    if (!db) await initDatabase();
-    
-    const transaction = db.transaction(['guests'], 'readwrite');
-    const store = transaction.objectStore('guests');
-    
-    try {
-        // Limpar convidados antigos do evento
-        const oldGuests = await getGuestsFromDB(eventId);
-        for (const guest of oldGuests) {
-            await store.delete(guest.id);
-        }
-        
-        // Adicionar novos convidados
-        for (const guest of guestsArray) {
-            const guestData = {
-                ...guest,
-                eventId: eventId,
-                status: guest.status || 'pending',
-                createdAt: Date.now()
-            };
-            await store.add(guestData);
-        }
-        
-        console.log('💾 Convidados salvos no banco:', guestsArray.length);
-    } catch (error) {
-        console.error('❌ Erro ao salvar convidados:', error);
-        throw error;
-    }
-}
-
-// Buscar convidados do banco
-async function getGuestsFromDB(eventId = null) {
-    if (!db) await initDatabase();
-    
-    const transaction = db.transaction(['guests'], 'readonly');
-    const store = transaction.objectStore('guests');
-    
-    if (eventId) {
-        const index = store.index('eventId');
-        return await getAllFromIndex(index, eventId);
-    } else {
-        return await getAllFromStore(store);
-    }
-}
-
-// Atualizar status de confirmação
-async function updateGuestStatus(guestId, status) {
-    if (!db) await initDatabase();
-    
-    const transaction = db.transaction(['guests', 'confirmations'], 'readwrite');
-    const guestStore = transaction.objectStore('guests');
-    const confirmationStore = transaction.objectStore('confirmations');
-    
-    // Atualizar status do convidado
-    const guest = await guestStore.get(guestId);
-    if (guest) {
-        guest.status = status;
-        guest.updatedAt = Date.now();
-        await guestStore.put(guest);
-        
-        // Salvar confirmação
-        await confirmationStore.add({
-            guestId: guestId,
-            status: status,
-            timestamp: Date.now(),
-            guestName: guest.nome
-        });
-        
-        console.log('✅ Status atualizado no banco:', guest.nome, '->', status);
-        return true;
-    }
-    return false;
-}
-
-// Funções auxiliares
-function getAllFromStore(store) {
-    return new Promise((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-function getAllFromIndex(index, value) {
-    return new Promise((resolve, reject) => {
-        const request = index.getAll(value);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-// Carregar dados do banco ao inicializar
-async function loadDataFromDB() {
-    try {
-        await initDatabase();
-        const dbGuests = await getGuestsFromDB();
-        
-        if (dbGuests.length > 0) {
-            guests = dbGuests;
-            console.log('📊 Convidados carregados do banco:', guests.length);
-            updateDashboard();
-        }
-    } catch (error) {
-        console.error('❌ Erro ao carregar do banco:', error);
-    }
-} 
-
-// Salvar imagem no banco
-async function saveImageToDB(imageId, imageData) {
-    if (!db) await initDatabase();
-    
-    const transaction = db.transaction(['images'], 'readwrite');
-    const store = transaction.objectStore('images');
-    
-    await store.add({
-        id: imageId,
-        data: imageData,
-        timestamp: Date.now()
-    });
-    
-    console.log('💾 Imagem salva no IndexedDB:', imageId);
-}
-
-// Buscar imagem do banco
-async function getImageFromDB(imageId) {
-    if (!db) await initDatabase();
-    
-    const transaction = db.transaction(['images'], 'readonly');
-    const store = transaction.objectStore('images');
-    
-    const image = await store.get(imageId);
-    return image ? image.data : null;
-} 
+checkConfirmationPage(); 
