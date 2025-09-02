@@ -225,46 +225,29 @@ function createTestDataForMobile(eventId, guestId) {
     };
 }
 
-// Função para comprimir imagem automaticamente
-function compressImage(imageDataUrl, maxWidth = 800, quality = 0.8) {
-    return new Promise((resolve, reject) => {
+// Função para comprimir imagem
+function compressImage(imageDataUrl, maxWidth = 800, quality = 0.7) {
+    return new Promise((resolve) => {
         const img = new Image();
         img.onload = function() {
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // Calcular proporção para manter aspect ratio
-                const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-                const newWidth = img.width * ratio;
-                const newHeight = img.height * ratio;
-                
-                canvas.width = newWidth;
-                canvas.height = newHeight;
-                
-                // Desenhar imagem redimensionada
-                ctx.drawImage(img, 0, 0, newWidth, newHeight);
-                
-                // Comprimir com qualidade especificada
-                const compressedImage = canvas.toDataURL('image/jpeg', quality);
-                
-                console.log('🖼️ Imagem comprimida:', {
-                    original: imageDataUrl.length,
-                    compressed: compressedImage.length,
-                    reduction: Math.round((1 - compressedImage.length / imageDataUrl.length) * 100) + '%'
-                });
-                
-                resolve(compressedImage);
-            } catch (error) {
-                console.error('❌ Erro ao comprimir imagem:', error);
-                reject(error);
-            }
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Calcular proporção para manter aspect ratio
+            const ratio = maxWidth / img.width;
+            const newWidth = maxWidth;
+            const newHeight = img.height * ratio;
+            
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            
+            // Desenhar imagem redimensionada
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+            
+            // Comprimir com qualidade especificada
+            const compressedImage = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedImage);
         };
-        
-        img.onerror = function() {
-            reject(new Error('Erro ao carregar imagem para compressão'));
-        };
-        
         img.src = imageDataUrl;
     });
 }
@@ -306,16 +289,19 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SOLUÇÃO SIMPLES: Usar localStorage com ID único
+    // SOLUÇÃO SIMPLES: Usar localStorage com ID único e compressão
     let imageParam = '';
     if (selectedImage) {
         try {
             // Gerar ID único para a imagem
             const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
-            // Salvar imagem no localStorage com ID único
-            localStorage.setItem(imageId, selectedImage);
-            console.log('💾 Imagem salva com ID:', imageId);
+            // Comprimir imagem antes de salvar
+            compressImage(selectedImage, 600, 0.5).then(compressedImage => {
+                // Salvar imagem comprimida no localStorage
+                localStorage.setItem(imageId, compressedImage);
+                console.log('💾 Imagem comprimida salva com ID:', imageId);
+            });
             
             // Incluir apenas o ID na URL
             imageParam = `&imageKey=${imageId}`;
@@ -935,13 +921,14 @@ function handleImageSelection(event) {
 }
 
 // Função para lidar com upload de imagem customizada
-function handleCustomImageUpload(event) {
+async function handleCustomImageUpload(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            selectedImage = e.target.result;
-            console.log('🖼️ Imagem customizada carregada:', selectedImage.substring(0, 100) + '...');
+        reader.onload = async function(e) {
+            // Comprimir imagem antes de salvar
+            selectedImage = await compressImage(e.target.result, 800, 0.7);
+            console.log('🖼️ Imagem customizada carregada e comprimida:', selectedImage.substring(0, 100) + '...');
             console.log('🖼️ Tamanho da imagem:', selectedImage.length);
             
             showImagePreview(selectedImage);
