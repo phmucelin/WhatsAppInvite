@@ -278,6 +278,7 @@ function compressImage(imageDataUrl, maxWidth = 800, quality = 0.8) {
 }
 
 // Função para gerar link de confirmação com fallback para mobile
+// Função para gerar link de confirmação com fallback para mobile
 function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
 
@@ -1507,4 +1508,4 @@ function confirmPresence(guestId, status) {
 }
 
 // Inicializar verificação de confirmação
-checkConfirmationPage();
+checkConfirmationPage(); 
