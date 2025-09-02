@@ -225,31 +225,29 @@ function createTestDataForMobile(eventId, guestId) {
     };
 }
 
-// Função para comprimir imagem
-function compressImage(imageDataUrl, maxWidth = 800, quality = 0.7) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Calcular proporção para manter aspect ratio
-            const ratio = maxWidth / img.width;
-            const newWidth = maxWidth;
-            const newHeight = img.height * ratio;
-            
-            canvas.width = newWidth;
-            canvas.height = newHeight;
-            
-            // Desenhar imagem redimensionada
-            ctx.drawImage(img, 0, 0, newWidth, newHeight);
-            
-            // Comprimir com qualidade especificada
-            const compressedImage = canvas.toDataURL('image/jpeg', quality);
-            resolve(compressedImage);
-        };
-        img.src = imageDataUrl;
-    });
+// Função para comprimir imagem de forma síncrona
+function compressImageSync(imageDataUrl, maxWidth = 400) {
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Carregar imagem de forma síncrona
+    img.src = imageDataUrl;
+    
+    // Calcular dimensões mantendo proporção
+    const ratio = maxWidth / img.width;
+    const newWidth = maxWidth;
+    const newHeight = img.height * ratio;
+    
+    // Configurar canvas
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    
+    // Desenhar imagem redimensionada
+    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+    
+    // Retornar imagem comprimida
+    return canvas.toDataURL('image/jpeg', 0.5);
 }
 
 // Função para gerar link de confirmação com fallback para mobile
@@ -289,26 +287,16 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SOLUÇÃO SIMPLES: Usar localStorage com ID único e compressão
+    // SOLUÇÃO REAL: Comprimir imagem e incluir direto na URL
     let imageParam = '';
     if (selectedImage) {
         try {
-            // Gerar ID único para a imagem
-            const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            
-            // Comprimir imagem antes de salvar
-            compressImage(selectedImage, 600, 0.5).then(compressedImage => {
-                // Salvar imagem comprimida no localStorage
-                localStorage.setItem(imageId, compressedImage);
-                console.log('💾 Imagem comprimida salva com ID:', imageId);
-            });
-            
-            // Incluir apenas o ID na URL
-            imageParam = `&imageKey=${imageId}`;
-            
+            // Comprimir imagem de forma síncrona
+            const compressedImage = compressImageSync(selectedImage);
+            imageParam = `&image=${encodeURIComponent(compressedImage)}`;
+            console.log('🖼️ Imagem comprimida incluída na URL');
         } catch (error) {
-            console.error('❌ Erro ao salvar imagem:', error);
-            // Se der erro, não incluir imagem
+            console.error('❌ Erro ao comprimir imagem:', error);
         }
     }
     
@@ -921,26 +909,16 @@ function handleImageSelection(event) {
 }
 
 // Função para lidar com upload de imagem customizada
-async function handleCustomImageUpload(event) {
+function handleCustomImageUpload(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = async function(e) {
+        reader.onload = function(e) {
             // Comprimir imagem antes de salvar
-            selectedImage = await compressImage(e.target.result, 800, 0.7);
-            console.log('🖼️ Imagem customizada carregada e comprimida:', selectedImage.substring(0, 100) + '...');
-            console.log('🖼️ Tamanho da imagem:', selectedImage.length);
+            selectedImage = compressImageSync(e.target.result);
+            console.log('🖼️ Imagem carregada e comprimida');
             
             showImagePreview(selectedImage);
-            
-            // Salvar no localStorage
-            try {
-                localStorage.setItem('selectedImage', selectedImage);
-                console.log('💾 Imagem customizada salva no localStorage');
-            } catch (error) {
-                console.error('❌ Erro ao salvar imagem customizada no localStorage:', error);
-            }
-            
             updateInvitePreview();
         };
         reader.readAsDataURL(file);

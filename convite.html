@@ -420,18 +420,11 @@
                 const eventDescription = urlParams.get('eventDescription');
                 const nameFromUrl = urlParams.get('name');
 
-                // SOLUÇÃO SIMPLES: Carregar a imagem do localStorage
-                const imageKeyFromUrl = urlParams.get('imageKey');
-                let imageBase64 = imageKeyFromUrl ? localStorage.getItem(imageKeyFromUrl) : null;
+                // SOLUÇÃO REAL: Carregar imagem diretamente da URL
+                const imageFromUrl = urlParams.get('image');
                 
-                // FALLBACK: Se não encontrar pela chave, tentar pela chave padrão
-                if (!imageBase64) {
-                    console.log('🔄 Tentando fallback para imagem padrão...');
-                    imageBase64 = localStorage.getItem('selectedImage');
-                }
-
-                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImageKey: !!imageKeyFromUrl, hasImageBase64: !!imageBase64 });
-
+                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImage: !!imageFromUrl });
+                
                 // Criar objeto de dados do evento
                 const eventData = {
                     name: eventName || 'Nome do Evento',
@@ -439,7 +432,7 @@
                     location: eventLocation || 'Local do evento',
                     description: eventDescription || 'Descrição do evento'
                 };
-
+                
                 // Criar objeto do convidado
                 const guest = {
                     id: guestId,
@@ -447,9 +440,9 @@
                     numero: '+5511999999999',
                     status: 'pending'
                 };
-
+                
                 console.log('📊 Dados finais:', { eventData, guest });
-
+                
                 // Preencher dados na página
                 document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
                 document.getElementById('eventName').textContent = eventData.name;
@@ -457,31 +450,38 @@
                 document.getElementById('eventDateTime').textContent = formatDateTime(eventData.date);
                 document.getElementById('eventLocation').textContent = eventData.location;
                 document.getElementById('eventDescription').textContent = eventData.description;
-
-                // Tentar carregar a imagem do localStorage
-                let imageLoaded = false;
-                if (imageBase64) {
-                    console.log('🖼️ Tentando carregar imagem do localStorage...');
-                    console.log('🖼️ Tamanho da imagem:', imageBase64.length);
-                    console.log('🖼️ Primeiros 100 caracteres:', imageBase64.substring(0, 100));
-                    
-                    try {
-                        loadImageToContainer(imageBase64);
-                        imageLoaded = true;
-                        console.log('✅ Imagem do localStorage carregada com sucesso!');
-                    } catch (error) {
-                        console.error('❌ Erro ao carregar imagem do localStorage:', error);
-                    }
-                } else {
-                    console.log('❌ Nenhuma imagem encontrada no localStorage');
-                    console.log('🔍 Chaves disponíveis:', Object.keys(localStorage).filter(key => key.includes('img') || key.includes('selected')));
-                }
                 
-                // Se nenhuma imagem carregou, mostrar placeholder
-                if (!imageLoaded) {
-                    console.log('❌ Nenhuma imagem conseguiu ser carregada');
+                // Carregar imagem se existir
+                if (imageFromUrl) {
+                    console.log('🖼️ Carregando imagem da URL...');
                     const imageContainer = document.getElementById('inviteImage');
-                    imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem disponível</p></div>';
+                    
+                    const img = document.createElement('img');
+                    img.src = decodeURIComponent(imageFromUrl);
+                    img.alt = 'Convite';
+                    img.style.cssText = `
+                        max-width: 100%;
+                        height: auto;
+                        border-radius: 10px;
+                        display: block;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                    `;
+                    
+                    img.onerror = function() {
+                        console.error('❌ Erro ao carregar imagem');
+                        imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Erro ao carregar imagem</p></div>';
+                    };
+                    
+                    img.onload = function() {
+                        console.log('✅ Imagem carregada com sucesso!');
+                    };
+                    
+                    imageContainer.innerHTML = '';
+                    imageContainer.appendChild(img);
+                } else {
+                    console.log('❌ Nenhuma imagem na URL');
+                    const imageContainer = document.getElementById('inviteImage');
+                    imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem selecionada</p></div>';
                 }
 
                 // Salvar dados para confirmação
