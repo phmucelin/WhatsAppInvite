@@ -474,7 +474,34 @@
                     throw new Error(`Parâmetros inválidos: event=${eventId}, guest=${guestId}`);
                 }
 
-                // Tentar carregar dados do localStorage
+                // Priorizar dados da URL sobre localStorage para mobile
+                let eventData = {};
+                let guest = {};
+                
+                // Carregar dados do evento da URL
+                const eventName = urlParams.get('eventName');
+                const eventDate = urlParams.get('eventDate');
+                const eventLocation = urlParams.get('eventLocation');
+                const eventDescription = urlParams.get('eventDescription');
+                
+                if (eventName || eventDate || eventLocation || eventDescription) {
+                    console.log('📊 Dados do evento encontrados na URL');
+                    eventData = {
+                        name: eventName || 'Nome do Evento',
+                        date: eventDate || new Date().toISOString(),
+                        location: eventLocation || 'Local do evento',
+                        description: eventDescription || 'Descrição do evento'
+                    };
+                }
+                
+                // Carregar nome do convidado da URL
+                const nameFromUrl = urlParams.get('name');
+                if (nameFromUrl) {
+                    guest.nome = decodeURIComponent(nameFromUrl);
+                    console.log('👤 Nome encontrado na URL:', guest.nome);
+                }
+                
+                // Tentar carregar dados do localStorage como backup
                 let storedData = null;
                 try {
                     storedData = localStorage.getItem('whatsappInvitesData');
@@ -483,36 +510,27 @@
                     console.warn('⚠️ Erro ao acessar localStorage:', localStorageError);
                 }
 
-                // Se não conseguir acessar localStorage, tentar carregar dados de teste
-                if (!storedData) {
-                    console.log('🔄 Tentando carregar dados de teste...');
-                    storedData = JSON.stringify({
-                        eventData: {
-                            name: 'Evento de Teste',
-                            date: new Date().toISOString(),
-                            location: 'Local do Evento',
-                            description: 'Descrição do evento de teste'
-                        },
-                        guests: [{
-                            id: guestId,
-                            nome: 'Convidado',
-                            numero: '+5511999999999',
-                            status: 'pending'
-                        }]
-                    });
+                // Se não tiver dados da URL, usar localStorage
+                if (!eventData.name && storedData) {
+                    console.log('🔄 Usando dados do localStorage como backup');
+                    const data = JSON.parse(storedData);
+                    eventData = data.eventData || {};
+                    const guests = data.guests || [];
+                    guest = guests.find(g => g.id === guestId) || guest;
                 }
-
-                const data = JSON.parse(storedData);
-                const eventData = data.eventData || {};
-                const guests = data.guests || [];
                 
-                console.log('📊 Dados carregados:', { eventData, guests: guests.length });
+                // Se ainda não tiver dados, criar dados padrão
+                if (!eventData.name) {
+                    console.log('🔄 Criando dados padrão');
+                    eventData = {
+                        name: 'Evento de Teste',
+                        date: new Date().toISOString(),
+                        location: 'Local do Evento',
+                        description: 'Descrição do evento de teste'
+                    };
+                }
                 
-                // Encontrar o convidado
-                let guest = guests.find(g => g.id === guestId);
-                if (!guest) {
-                    console.warn('⚠️ Convidado não encontrado, criando convidado padrão');
-                    // Criar convidado padrão se não encontrar
+                if (!guest.nome) {
                     guest = {
                         id: guestId,
                         nome: 'Convidado',
@@ -521,13 +539,8 @@
                     };
                 }
                 
-                // Tentar pegar nome da URL se disponível
-                const nameFromUrl = urlParams.get('name');
-                if (nameFromUrl) {
-                    guest.nome = decodeURIComponent(nameFromUrl);
-                    console.log('👤 Nome encontrado na URL:', guest.nome);
-                }
-
+                console.log('📊 Dados finais:', { eventData, guest });
+                
                 // Preencher dados na página
                 document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
                 document.getElementById('eventName').textContent = eventData.name || 'Nome do Evento';
@@ -536,21 +549,30 @@
                 document.getElementById('eventLocation').textContent = eventData.location || 'Local do evento';
                 // Mostrar imagem se existir
                 let selectedImage = null;
-                try {
-                    selectedImage = localStorage.getItem('selectedImage');
-                    console.log('🔍 Procurando imagem no localStorage:', selectedImage);
-                } catch (imageError) {
-                    console.warn('⚠️ Erro ao acessar imagem do localStorage:', imageError);
-                }
                 
-                // Se não conseguir acessar localStorage, tentar usar dados da URL
-                if (!selectedImage) {
-                    console.log('🔄 Tentando carregar imagem da URL...');
-                    // Tentar pegar imagem da URL como parâmetro
-                    const imageFromUrl = urlParams.get('image');
-                    if (imageFromUrl) {
-                        selectedImage = decodeURIComponent(imageFromUrl);
-                        console.log('🖼️ Imagem encontrada na URL:', selectedImage);
+                // Priorizar imagem da URL para mobile
+                const imageFromUrl = urlParams.get('image');
+                const imageHashFromUrl = urlParams.get('imageHash');
+                
+                if (imageFromUrl) {
+                    selectedImage = decodeURIComponent(imageFromUrl);
+                    console.log('🖼️ Imagem encontrada na URL:', selectedImage.substring(0, 100) + '...');
+                } else if (imageHashFromUrl) {
+                    console.log('🖼️ Hash da imagem encontrado na URL:', imageHashFromUrl);
+                    // Para hash, tentar usar localStorage como backup
+                    try {
+                        selectedImage = localStorage.getItem('selectedImage');
+                        console.log('🔄 Usando imagem do localStorage como backup');
+                    } catch (imageError) {
+                        console.warn('⚠️ Erro ao acessar imagem do localStorage:', imageError);
+                    }
+                } else {
+                    // Tentar carregar do localStorage
+                    try {
+                        selectedImage = localStorage.getItem('selectedImage');
+                        console.log('🔍 Procurando imagem no localStorage:', selectedImage);
+                    } catch (imageError) {
+                        console.warn('⚠️ Erro ao acessar imagem do localStorage:', imageError);
                     }
                 }
                 
@@ -886,27 +908,47 @@
         function formatDate(dateString) {
             if (!dateString) return 'Data não definida';
             
-            const date = new Date(dateString);
-            return date.toLocaleDateString('pt-BR', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    console.warn('⚠️ Data inválida:', dateString);
+                    return 'Data inválida';
+                }
+                
+                return date.toLocaleDateString('pt-BR', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            } catch (error) {
+                console.error('❌ Erro ao formatar data:', error);
+                return 'Data inválida';
+            }
         }
 
         function formatDateTime(dateString) {
             if (!dateString) return 'Data e hora não definidas';
             
-            const date = new Date(dateString);
-            return date.toLocaleString('pt-BR', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    console.warn('⚠️ Data inválida:', dateString);
+                    return 'Data e hora inválidas';
+                }
+                
+                return date.toLocaleString('pt-BR', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (error) {
+                console.error('❌ Erro ao formatar data e hora:', error);
+                return 'Data e hora inválidas';
+            }
         }
 
         // Função para adicionar animações de entrada aos elementos

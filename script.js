@@ -253,6 +253,21 @@ function generateConfirmationLink(guestId = null) {
     // Adicionar timestamp para evitar cache em dispositivos móveis
     const timestamp = Date.now();
     
+    // Adicionar dados do evento na URL para mobile
+    let eventParams = '';
+    if (eventData.name) {
+        eventParams += `&eventName=${encodeURIComponent(eventData.name)}`;
+    }
+    if (eventData.date) {
+        eventParams += `&eventDate=${encodeURIComponent(eventData.date)}`;
+    }
+    if (eventData.location) {
+        eventParams += `&eventLocation=${encodeURIComponent(eventData.location)}`;
+    }
+    if (eventData.description) {
+        eventParams += `&eventDescription=${encodeURIComponent(eventData.description)}`;
+    }
+    
     // Adicionar nome do convidado se disponível (apenas se não for muito longo)
     let nameParam = '';
     if (guestId) {
@@ -262,12 +277,20 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // Não incluir imagem na URL para evitar links muito longos
-    // A imagem será carregada do localStorage ou dados padrão
+    // Adicionar imagem na URL para mobile (convertida para base64 se necessário)
+    let imageParam = '';
+    if (selectedImage) {
+        // Se a imagem for muito longa, usar apenas um hash
+        if (selectedImage.length > 500) {
+            imageParam = `&imageHash=${btoa(selectedImage.substring(0, 100)).substring(0, 20)}`;
+        } else {
+            imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+        }
+    }
     
     if (guestId) {
         // Usar a nova página de convite personalizada
-        return `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}&t=${timestamp}`;
+        return `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}${eventParams}${imageParam}&t=${timestamp}`;
     }
     return `${baseUrl}?event=${encodedEvent}&t=${timestamp}`;
 }
