@@ -95,7 +95,6 @@ function handleCSVUpload(event) {
         const reader = new FileReader();
         reader.onload = function(e) {
             parseCSVData(e.target.result);
-            updateDashboard();
         };
         reader.readAsText(file);
     }
@@ -118,7 +117,7 @@ function parseCSVData(csvText) {
         }
     }
     
-    displayGuestsPreview();
+    console.log('✅ Convidados carregados:', guests.length);
     saveData();
     updateDashboard();
 }
@@ -1210,91 +1209,40 @@ function showSendProgress() {
     document.getElementById('progressText').textContent = 'Preparando envio...';
 }
 
-// Funções de armazenamento
+// Função para salvar dados
 function saveData() {
-    const data = {
-        guests: guests,
-        eventData: eventData,
-        timestamp: Date.now()
-    };
-    localStorage.setItem('whatsappInvitesData', JSON.stringify(data));
-}
-
-// Verificar atualizações do localStorage (backup para casos onde postMessage não funciona)
-function checkForUpdates() {
-    const stored = localStorage.getItem('whatsappInvitesData');
-    const lastUpdate = localStorage.getItem('lastConfirmationUpdate');
-    
-    if (stored) {
-        try {
-            const data = JSON.parse(stored);
-            const storedGuests = data.guests || [];
-            
-            // Verificar se houve mudanças nos status dos convidados
-            let hasChanges = false;
-            
-            storedGuests.forEach(storedGuest => {
-                const localGuest = guests.find(g => g.id === storedGuest.id);
-                if (localGuest && localGuest.status !== storedGuest.status) {
-                    // Atualizar o convidado local
-                    localGuest.status = storedGuest.status;
-                    hasChanges = true;
-                    
-                    // Mostrar notificação (apenas se não foi mostrada via postMessage)
-                    showNotification(
-                        `${localGuest.nome} ${storedGuest.status === 'confirmed' ? 'confirmou' : 'não confirmou'} presença!`, 
-                        'success'
-                    );
-                }
-            });
-            
-            // Se houve mudanças, atualizar o dashboard
-            if (hasChanges) {
-                updateDashboard();
-            }
-            
-            // Verificar atualizações recentes (últimos 10 segundos)
-            if (lastUpdate) {
-                const updateData = JSON.parse(lastUpdate);
-                const timeDiff = Date.now() - updateData.timestamp;
-                
-                if (timeDiff < 10000) { // 10 segundos
-                    const guest = guests.find(g => g.id === updateData.guestId);
-                    if (guest && guest.status !== updateData.status) {
-                        guest.status = updateData.status;
-                        updateDashboard();
-                        
-                        // Não mostrar notificação duplicada se já foi mostrada via postMessage
-                        console.log(`Atualização detectada: ${guest.nome} - ${updateData.status}`);
-                    }
-                }
-            }
-            
-        } catch (error) {
-            console.error('Erro ao verificar atualizações:', error);
-        }
+    try {
+        localStorage.setItem('guests', JSON.stringify(guests));
+        localStorage.setItem('eventData', JSON.stringify(eventData));
+    } catch (error) {
+        console.error('❌ Erro ao salvar dados:', error);
     }
 }
 
+// Função para carregar dados salvos
 function loadStoredData() {
-    const stored = localStorage.getItem('whatsappInvitesData');
-    if (stored) {
-        try {
-            const data = JSON.parse(stored);
-            guests = data.guests || [];
-            eventData = data.eventData || {};
-            
-            // Restaurar valores dos campos
-            if (eventData.name) document.getElementById('eventName').value = eventData.name;
-            if (eventData.date) document.getElementById('eventDate').value = eventData.date;
-            if (eventData.location) document.getElementById('eventLocation').value = eventData.location;
-            if (eventData.description) document.getElementById('eventDescription').value = eventData.description;
-            
-            updateDashboard();
-            updateInvitePreview();
-        } catch (error) {
-            console.error('Erro ao carregar dados salvos:', error);
+    try {
+        const savedGuests = localStorage.getItem('guests');
+        const savedEventData = localStorage.getItem('eventData');
+        
+        if (savedGuests) {
+            guests = JSON.parse(savedGuests);
+            console.log('📊 Convidados carregados:', guests.length);
         }
+        
+        if (savedEventData) {
+            eventData = JSON.parse(savedEventData);
+            
+            // Preencher campos do evento
+            document.getElementById('eventName').value = eventData.name || '';
+            document.getElementById('eventDate').value = eventData.date || '';
+            document.getElementById('eventLocation').value = eventData.location || '';
+            document.getElementById('eventDescription').value = eventData.description || '';
+        }
+        
+        updateDashboard();
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados:', error);
     }
 }
 
