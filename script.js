@@ -278,10 +278,9 @@ function compressImage(imageDataUrl, maxWidth = 800, quality = 0.8) {
 }
 
 // Função para gerar link de confirmação com fallback para mobile
-// Função para gerar link de confirmação com fallback para mobile
-function generateConfirmationLink(guestId = null) {
+async function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
-
+    
     // Detectar se está rodando localmente ou em servidor
     let baseUrl;
     if (window.location.protocol === 'file:') {
@@ -315,21 +314,32 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SOLUÇÃO: Salvar a imagem no localStorage e não mais na URL
+    // SOLUÇÃO REAL: Sempre incluir imagem na URL com tratamento robusto
     let imageParam = '';
     if (selectedImage) {
-        // A chave no localStorage será única para cada convite/evento
-        const imageKey = `inviteImageBase64_${eventId}`;
-        localStorage.setItem(imageKey, selectedImage);
-        
-        console.log(`🖼️ Imagem salva no localStorage com a chave: ${imageKey}`);
-        
-        // Agora, o parâmetro da URL será apenas a chave para a imagem
-        imageParam = `&imageKey=${encodeURIComponent(imageKey)}`;
+        try {
+            // Verificar se a imagem é válida
+            if (selectedImage.startsWith('data:image/')) {
+                // Imagem base64 válida
+                imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+                console.log('🖼️ Imagem base64 incluída na URL');
+            } else if (selectedImage.startsWith('http')) {
+                // Imagem de URL externa
+                imageParam = `&imageUrl=${encodeURIComponent(selectedImage)}`;
+                console.log('🖼️ URL externa incluída na URL');
+            } else {
+                // Imagem pré-definida
+                imageParam = `&imagePath=${encodeURIComponent(selectedImage)}`;
+                console.log('🖼️ Caminho de imagem incluído na URL');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao processar imagem:', error);
+            // Não incluir imagem se der erro
+        }
     }
     
-    // A URL final é muito mais curta e não causa erro
     if (guestId) {
+        // Usar a nova página de convite personalizada
         const finalUrl = `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}${eventParams}${imageParam}&t=${timestamp}`;
         return finalUrl;
     }
