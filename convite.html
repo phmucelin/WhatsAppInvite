@@ -384,16 +384,16 @@
             try {
                 console.log('🔍 Iniciando carregamento do convite...');
 
-                // Pegar parâmetros da URL
+                // Pegar parâmetros da URL (compatibilidade com parâmetros novos e antigos)
                 const urlParams = new URLSearchParams(window.location.search);
-                const eventId = urlParams.get('event');
-                const guestId = urlParams.get('guest');
+                const eventId = urlParams.get('e') || urlParams.get('event');
+                const guestId = urlParams.get('g') || urlParams.get('guest');
                 const timestamp = urlParams.get('t');
 
                 console.log('📱 Parâmetros da URL:', { eventId, guestId, timestamp });
 
                 if (!eventId || !guestId) {
-                    throw new Error(`Parâmetros inválidos: event=${eventId}, guest=${guestId}`);
+                    throw new Error(`Parâmetros inválidos: e=${eventId}, g=${guestId}`);
                 }
 
                 // Dados da URL - usando parâmetros otimizados
@@ -407,6 +407,7 @@
                 const imageHash = urlParams.get('ih') || urlParams.get('img') || urlParams.get('image');
                 
                 console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImage: !!imageHash });
+                console.log('🔍 Parâmetros completos da URL:', Object.fromEntries(urlParams.entries()));
                 
                 // Criar objeto de dados do evento
                 const eventData = {
@@ -427,36 +428,52 @@
                 console.log('📊 Dados finais:', { eventData, guest });
                 
                 // Preencher dados na página
-                document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
-                document.getElementById('eventName').textContent = eventData.name;
-                document.getElementById('eventDate').textContent = formatDate(eventData.date);
-                document.getElementById('eventDateTime').textContent = formatDateTime(eventData.date);
-                document.getElementById('eventLocation').textContent = eventData.location;
-                document.getElementById('eventDescription').textContent = eventData.description;
+                console.log('📝 Preenchendo dados na página...');
+                
+                try {
+                    document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
+                    document.getElementById('eventName').textContent = eventData.name;
+                    document.getElementById('eventDate').textContent = formatDate(eventData.date);
+                    document.getElementById('eventDateTime').textContent = formatDateTime(eventData.date);
+                    document.getElementById('eventLocation').textContent = eventData.location;
+                    document.getElementById('eventDescription').textContent = eventData.description;
+                    
+                    console.log('✅ Dados preenchidos com sucesso');
+                } catch (error) {
+                    console.error('❌ Erro ao preencher dados:', error);
+                    throw new Error('Erro ao preencher dados na página: ' + error.message);
+                }
                 
                 // Carregar imagem se existir (do localStorage ou URL)
+                console.log('🖼️ Verificando imagem...');
+                
                 if (imageHash) {
-                    console.log('🖼️ Carregando imagem...');
+                    console.log('🖼️ Hash da imagem encontrado:', imageHash);
                     const imageContainer = document.getElementById('inviteImage');
                     
                     // Tentar carregar do localStorage primeiro (solução otimizada)
                     let imageSrc = null;
                     
                     if (urlParams.get('ih')) {
+                        console.log('🔍 Tentando carregar do localStorage com hash:', imageHash);
                         // Nova solução: carregar do localStorage
                         imageSrc = localStorage.getItem(`img_${imageHash}`);
                         if (imageSrc) {
                             console.log('✅ Imagem carregada do localStorage');
+                        } else {
+                            console.log('❌ Imagem não encontrada no localStorage');
                         }
                     }
                     
                     // Fallback: tentar carregar da URL (compatibilidade)
                     if (!imageSrc && (urlParams.get('img') || urlParams.get('image'))) {
+                        console.log('🔍 Tentando carregar da URL (fallback)');
                         imageSrc = decodeURIComponent(urlParams.get('img') || urlParams.get('image'));
                         console.log('✅ Imagem carregada da URL (fallback)');
                     }
                     
                     if (imageSrc) {
+                        console.log('🖼️ Carregando imagem na página...');
                         const img = document.createElement('img');
                         img.src = imageSrc;
                         img.alt = 'Convite';
@@ -480,11 +497,11 @@
                         imageContainer.innerHTML = '';
                         imageContainer.appendChild(img);
                     } else {
-                        console.log('❌ Imagem não encontrada');
+                        console.log('❌ Imagem não encontrada em nenhuma fonte');
                         imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Imagem não encontrada</p></div>';
                     }
                 } else {
-                    console.log('❌ Nenhuma imagem na URL');
+                    console.log('ℹ️ Nenhuma imagem na URL');
                     const imageContainer = document.getElementById('inviteImage');
                     imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem selecionada</p></div>';
                 }
@@ -497,9 +514,14 @@
                     eventData: eventData
                 };
 
+                console.log('✅ Todos os dados foram carregados com sucesso!');
+                console.log('📊 Dados finais:', window.inviteData);
+
                 // Mostrar conteúdo e esconder loading
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('inviteContent').style.display = 'block';
+                
+                console.log('🎉 Convite carregado e exibido com sucesso!');
 
             } catch (error) {
                 console.error('Erro ao carregar convite:', error);
@@ -638,6 +660,26 @@
             if (!dateString) return 'Data não definida';
             
             try {
+                // Verificar se é formato DD/MM (novo formato otimizado)
+                if (dateString.includes('/') && dateString.split('/').length === 2) {
+                    const [day, month] = dateString.split('/');
+                    const currentYear = new Date().getFullYear();
+                    const date = new Date(currentYear, parseInt(month) - 1, parseInt(day));
+                    
+                    if (isNaN(date.getTime())) {
+                        console.warn('⚠️ Data inválida (formato DD/MM):', dateString);
+                        return 'Data inválida';
+                    }
+                    
+                    return date.toLocaleDateString('pt-BR', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                }
+                
+                // Formato ISO padrão
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) {
                     console.warn('⚠️ Data inválida:', dateString);
@@ -660,6 +702,28 @@
             if (!dateString) return 'Data e hora não definidas';
             
             try {
+                // Verificar se é formato DD/MM (novo formato otimizado)
+                if (dateString.includes('/') && dateString.split('/').length === 2) {
+                    const [day, month] = dateString.split('/');
+                    const currentYear = new Date().getFullYear();
+                    const date = new Date(currentYear, parseInt(month) - 1, parseInt(day));
+                    
+                    if (isNaN(date.getTime())) {
+                        console.warn('⚠️ Data inválida (formato DD/MM):', dateString);
+                        return 'Data e hora inválidas';
+                    }
+                    
+                    return date.toLocaleString('pt-BR', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+                
+                // Formato ISO padrão
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) {
                     console.warn('⚠️ Data inválida:', dateString);
@@ -682,6 +746,25 @@
 
         // Carregar dados quando a página carregar
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Página carregada, iniciando carregamento do convite...');
+            
+            // Debug: mostrar todos os parâmetros da URL
+            const urlParams = new URLSearchParams(window.location.search);
+            console.log('🔍 Todos os parâmetros da URL:', Object.fromEntries(urlParams.entries()));
+            
+            // Verificar se há parâmetros mínimos
+            const hasMinParams = urlParams.get('e') || urlParams.get('event');
+            const hasGuest = urlParams.get('g') || urlParams.get('guest');
+            
+            console.log('📋 Parâmetros mínimos:', { hasMinParams, hasGuest });
+            
+            if (!hasMinParams || !hasGuest) {
+                console.error('❌ Parâmetros mínimos não encontrados');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'block';
+                return;
+            }
+            
             loadInviteData();
         });
     </script>

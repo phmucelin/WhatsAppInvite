@@ -337,18 +337,26 @@ function generateEventId() {
 
 // Função para gerar hash único da imagem
 function generateImageHash(imageDataUrl) {
-    // Gerar um hash simples baseado no conteúdo da imagem
-    let hash = 0;
-    const str = imageDataUrl.substring(0, 100); // Usar apenas os primeiros 100 caracteres
-    
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Converter para 32-bit integer
+    try {
+        // Gerar um hash simples baseado no conteúdo da imagem
+        let hash = 0;
+        const str = imageDataUrl.substring(0, 100); // Usar apenas os primeiros 100 caracteres
+        
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Converter para 32-bit integer
+        }
+        
+        // Retornar hash em base36 para ser mais curto
+        const finalHash = Math.abs(hash).toString(36).substring(0, 8);
+        console.log('🔐 Hash da imagem gerado:', finalHash);
+        return finalHash;
+    } catch (error) {
+        console.error('❌ Erro ao gerar hash da imagem:', error);
+        // Fallback: usar timestamp como hash
+        return Date.now().toString(36).substring(0, 8);
     }
-    
-    // Retornar hash em base36 para ser mais curto
-    return Math.abs(hash).toString(36).substring(0, 8);
 }
 
 function generateGuestId() {
