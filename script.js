@@ -904,7 +904,7 @@ async function testWhatsAppAPI() {
 // let selectedImage = null; // Garantir que está definida globalmente
 
 // Função para lidar com seleção de imagem
-function handleImageSelection() {
+function handleImageSelection(event) {
     const select = document.getElementById('inviteImage');
     const customUpload = document.getElementById('customImageUpload');
     const imagePreview = document.getElementById('imagePreview');

@@ -226,6 +226,44 @@
             }
         }
         
+        @keyframes spectacularEntry {
+            0% { 
+                opacity: 0; 
+                transform: translateY(100px) scale(0.3); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+        
+        @keyframes iconBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes textSlideIn {
+            0% { 
+                opacity: 0; 
+                transform: translateX(-30px); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateX(0); 
+            }
+        }
+        
+        @keyframes buttonAppear {
+            0% { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+        
         /* Responsividade */
         @media (max-width: 768px) {
             .invite-container {
@@ -453,273 +491,96 @@
         // Função para confirmar presença
         function confirmPresence(status) {
             try {
-                const inviteData = window.inviteData;
-                if (!inviteData) {
-                    alert('Erro: Dados do convite não encontrados');
-                    return;
-                }
-
-                // Carregar dados salvos
-                const storedData = localStorage.getItem('whatsappInvitesData');
-                if (storedData) {
-                    const data = JSON.parse(storedData);
-                    const guests = data.guests || [];
-                    
-                    // Encontrar e atualizar o convidado
-                    const guest = guests.find(g => g.id === inviteData.guestId);
-                    if (guest) {
-                        guest.status = status;
+                // Atualizar status do convidado
+                const guestId = new URLSearchParams(window.location.search).get('guest');
+                if (guestId) {
+                    // Carregar lista de convidados do localStorage
+                    const savedGuests = localStorage.getItem('guests');
+                    if (savedGuests) {
+                        const guests = JSON.parse(savedGuests);
+                        const guestIndex = guests.findIndex(g => g.id === guestId);
                         
-                        // Salvar dados atualizados
-                        data.guests = guests;
-                        localStorage.setItem('whatsappInvitesData', JSON.stringify(data));
-                        
-                        // Salvar timestamp de atualização
-                        const updateData = {
-                            guestId: inviteData.guestId,
-                            status: status,
-                            timestamp: Date.now()
-                        };
-                        localStorage.setItem('lastConfirmationUpdate', JSON.stringify(updateData));
-                        
-                        // Notificar página principal se estiver na mesma sessão
-                        if (window.opener) {
-                            window.opener.postMessage({
-                                type: 'confirmation_update',
-                                guestId: inviteData.guestId,
-                                status: status,
-                                guestName: guest.nome
-                            }, '*');
+                        if (guestIndex !== -1) {
+                            guests[guestIndex].status = status;
+                            localStorage.setItem('guests', JSON.stringify(guests));
+                            
+                            // Salvar timestamp da última atualização
+                            localStorage.setItem('lastConfirmationUpdate', Date.now().toString());
+                            
+                            // Tentar notificar a aplicação principal
+                            if (window.opener) {
+                                window.opener.postMessage({
+                                    type: 'confirmationUpdate',
+                                    guestId: guestId,
+                                    status: status
+                                }, '*');
+                            }
                         }
                     }
                 }
-
-                // Mostrar confirmação
-                const isConfirmed = status === 'confirmed';
-                const message = isConfirmed 
-                    ? 'Presença confirmada! Obrigado!' 
-                    : 'Entendido. Obrigado pela resposta!';
                 
-                const icon = isConfirmed ? '✅' : '❌';
-                const color = isConfirmed ? '#28a745' : '#dc3545';
+                // Mostrar mensagem de confirmação
+                showConfirmationMessage(status);
                 
-                                // Substituir conteúdo da página
-                const confirmationHTML = `
-                    <div style="
-                        min-height: 100vh;
-                        background: linear-gradient(135deg, #0f1419 0%, #1a2332 25%, #2c3e50 50%, #34495e 75%, #2c3e50 100%);
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        padding: 20px;
-                        position: relative;
-                        overflow: hidden;
-                    ">
-                        <!-- Efeito de grade tecnológica -->
-                        <div style="
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 100%;
-                            background-image: 
-                                linear-gradient(rgba(30, 64, 175, 0.05) 1px, transparent 1px),
-                                linear-gradient(90deg, rgba(30, 64, 175, 0.05) 1px, transparent 1px);
-                            background-size: 40px 40px;
-                            animation: gridMove 20s linear infinite;
-                            pointer-events: none;
-                        "></div>
-                        
-                        <!-- Círculos flutuantes animados -->
-                        <div style="
-                            position: absolute;
-                            top: 20%;
-                            left: 10%;
-                            width: 100px;
-                            height: 100px;
-                            border: 2px solid rgba(30, 64, 175, 0.2);
-                            border-radius: 50%;
-                            animation: floatCircle 8s ease-in-out infinite;
-                        "></div>
-                        <div style="
-                            position: absolute;
-                            top: 70%;
-                            right: 15%;
-                            width: 60px;
-                            height: 60px;
-                            border: 2px solid rgba(16, 185, 129, 0.2);
-                            border-radius: 50%;
-                            animation: floatCircle 6s ease-in-out infinite reverse;
-                        "></div>
-                        
-                        <div style="
-                            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-                            padding: 40px;
-                            border-radius: 20px;
-                            text-align: center;
-                            max-width: 400px;
-                            width: 100%;
-                            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-                            animation: spectacularEntry 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                            position: relative;
-                            z-index: 1;
-                            border: 2px solid rgba(30, 64, 175, 0.1);
-                        ">
-                            <!-- Ícone com efeito especial -->
-                            <div style="
-                                font-size: 4rem;
-                                margin-bottom: 25px;
-                                animation: iconBounce 1.5s ease-in-out infinite;
-                                filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-                                position: relative;
-                            ">
-                                ${icon}
-                                <!-- Anel de confirmação -->
-                                <div style="
-                                    position: absolute;
-                                    top: -10px;
-                                    left: -10px;
-                                    right: -10px;
-                                    bottom: -10px;
-                                    border: 3px solid ${isConfirmed ? '#10b981' : '#ef4444'};
-                                    border-radius: 50%;
-                                    animation: confirmRing 2s ease-in-out infinite;
-                                    opacity: 0.6;
-                                "></div>
-                            </div>
-                            
-                            <h3 style="
-                                color: ${isConfirmed ? '#059669' : '#dc2626'}; 
-                                margin-bottom: 20px; 
-                                font-size: 1.6rem;
-                                font-weight: 700;
-                                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                                animation: textSlideIn 0.8s ease-out 0.3s both;
-                            ">
-                                ${isConfirmed ? 'Presença Confirmada!' : 'Resposta Registrada!'}
-                            </h3>
-                            
-                            <p style="
-                                font-size: 1.1rem; 
-                                margin-bottom: 20px; 
-                                color: #374151;
-                                line-height: 1.5;
-                                animation: textSlideIn 0.8s ease-out 0.5s both;
-                            ">
-                                ${message}
-                            </p>
-                            
-                            <p style="
-                                color: #6b7280; 
-                                font-size: 0.95rem; 
-                                margin-bottom: 25px;
-                                font-style: italic;
-                                animation: textSlideIn 0.8s ease-out 0.7s both;
-                            ">
-                                Você pode fechar esta página.
-                            </p>
-                            
-                            <button onclick="window.close()" 
-                                    style="
-                                        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-                                        color: white;
-                                        border: none;
-                                        padding: 12px 25px;
-                                        border-radius: 12px;
-                                        cursor: pointer;
-                                        font-weight: 600;
-                                        font-size: 1rem;
-                                        box-shadow: 0 6px 20px rgba(30, 64, 175, 0.3);
-                                        transition: all 0.3s ease;
-                                        position: relative;
-                                        overflow: hidden;
-                                        animation: buttonAppear 0.8s ease-out 0.9s both;
-                                    "
-                                    onmouseover="this.style.transform='translateY(-2px) scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(30, 64, 175, 0.4)'"
-                                    onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 6px 20px rgba(30, 64, 175, 0.3)'">
-                                ✨ Fechar Página
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <style>
-                        @keyframes spectacularEntry {
-                            0% { 
-                                opacity: 0; 
-                                transform: translateY(100px) scale(0.3) rotate(-10deg); 
-                            }
-                            50% { 
-                                opacity: 0.8; 
-                                transform: translateY(-20px) scale(1.1) rotate(2deg); 
-                            }
-                            100% { 
-                                opacity: 1; 
-                                transform: translateY(0) scale(1) rotate(0deg); 
-                            }
-                        }
-                        
-                        @keyframes iconBounce {
-                            0%, 100% { transform: scale(1) translateY(0); }
-                            50% { transform: scale(1.1) translateY(-5px); }
-                        }
-                        
-                        @keyframes confirmRing {
-                            0%, 100% { 
-                                transform: scale(1); 
-                                opacity: 0.6; 
-                            }
-                            50% { 
-                                transform: scale(1.2); 
-                                opacity: 0.3; 
-                            }
-                        }
-                        
-                        @keyframes textSlideIn {
-                            0% { 
-                                opacity: 0; 
-                                transform: translateX(-30px); 
-                            }
-                            100% { 
-                                opacity: 1; 
-                                transform: translateX(0); 
-                            }
-                        }
-                        
-                        @keyframes buttonAppear {
-                            0% { 
-                                opacity: 0; 
-                                transform: translateY(20px) scale(0.8); 
-                            }
-                            100% { 
-                                opacity: 1; 
-                                transform: translateY(0) scale(1); 
-                            }
-                        }
-                        
-                        @keyframes gridMove {
-                            0% { transform: translate(0, 0); }
-                            100% { transform: translate(40px, 40px); }
-                        }
-                        
-                        @keyframes floatCircle {
-                            0%, 100% { 
-                                transform: translateY(0px) scale(1); 
-                                opacity: 0.3;
-                            }
-                            50% { 
-                                transform: translateY(-30px) scale(1.1); 
-                                opacity: 0.7;
-                            }
-                        }
-                    </style>
-                `;
-                
-                document.body.innerHTML = confirmationHTML;
-
             } catch (error) {
                 console.error('Erro ao confirmar presença:', error);
                 alert('Erro ao confirmar presença. Tente novamente.');
             }
+        }
+        
+        // Função para mostrar mensagem de confirmação
+        function showConfirmationMessage(status) {
+            const mainContent = document.querySelector('.invite-container');
+            const statusText = status === 'confirmed' ? 'Presença Confirmada!' : 'Presença Declinada';
+            const statusIcon = status === 'confirmed' ? '✅' : '❌';
+            const statusColor = status === 'confirmed' ? '#4CAF50' : '#f44336';
+            
+            mainContent.innerHTML = `
+                <div style="
+                    text-align: center;
+                    padding: 60px 30px;
+                    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                    border-radius: 20px;
+                    color: white;
+                    animation: spectacularEntry 0.8s ease-out;
+                ">
+                    <div style="
+                        font-size: 4em;
+                        margin-bottom: 20px;
+                        animation: iconBounce 1s ease-out 0.3s both;
+                    ">
+                        ${statusIcon}
+                    </div>
+                    <h1 style="
+                        font-size: 2.5em;
+                        margin-bottom: 20px;
+                        color: ${statusColor};
+                        animation: textSlideIn 0.8s ease-out 0.5s both;
+                    ">
+                        ${statusText}
+                    </h1>
+                    <p style="
+                        font-size: 1.2em;
+                        margin-bottom: 30px;
+                        opacity: 0.9;
+                        animation: textSlideIn 0.8s ease-out 0.7s both;
+                    ">
+                        Obrigado por confirmar sua presença!
+                    </p>
+                    <button onclick="window.close()" style="
+                        background: linear-gradient(135deg, #667eea, #764ba2);
+                        color: white;
+                        border: none;
+                        padding: 15px 40px;
+                        border-radius: 50px;
+                        font-size: 1.1em;
+                        cursor: pointer;
+                        animation: buttonAppear 0.8s ease-out 0.9s both;
+                    ">
+                        Fechar
+                    </button>
+                </div>
+            `;
         }
 
         // Funções utilitárias
