@@ -456,10 +456,6 @@
         async function loadInviteData() {
             try {
                 console.log('🔍 Iniciando carregamento do convite...');
-                console.log('📱 User Agent:', navigator.userAgent);
-                console.log('🌐 Protocolo:', window.location.protocol);
-                console.log('🏠 Host:', window.location.host);
-                console.log('📍 Pathname:', window.location.pathname);
                 
                 // Pegar parâmetros da URL
                 const urlParams = new URLSearchParams(window.location.search);
@@ -468,112 +464,55 @@
                 const timestamp = urlParams.get('t');
                 
                 console.log('📱 Parâmetros da URL:', { eventId, guestId, timestamp });
-                console.log('🌐 URL completa:', window.location.href);
                 
                 if (!eventId || !guestId) {
                     throw new Error(`Parâmetros inválidos: event=${eventId}, guest=${guestId}`);
                 }
 
-                // Priorizar dados da URL sobre localStorage para mobile
-                let eventData = {};
-                let guest = {};
-                
-                // Carregar dados do evento da URL
+                // SEMPRE usar dados da URL primeiro
                 const eventName = urlParams.get('eventName');
                 const eventDate = urlParams.get('eventDate');
                 const eventLocation = urlParams.get('eventLocation');
                 const eventDescription = urlParams.get('eventDescription');
-                
-                if (eventName || eventDate || eventLocation || eventDescription) {
-                    console.log('📊 Dados do evento encontrados na URL');
-                    eventData = {
-                        name: eventName || 'Nome do Evento',
-                        date: eventDate || new Date().toISOString(),
-                        location: eventLocation || 'Local do evento',
-                        description: eventDescription || 'Descrição do evento'
-                    };
-                }
-                
-                // Carregar nome do convidado da URL
                 const nameFromUrl = urlParams.get('name');
-                if (nameFromUrl) {
-                    guest.nome = decodeURIComponent(nameFromUrl);
-                    console.log('👤 Nome encontrado na URL:', guest.nome);
-                }
+                const imageFromUrl = urlParams.get('image');
                 
-                // Tentar carregar dados do localStorage como backup
-                let storedData = null;
-                try {
-                    storedData = localStorage.getItem('whatsappInvitesData');
-                    console.log('💾 Dados do localStorage:', storedData ? 'Encontrados' : 'Não encontrados');
-                } catch (localStorageError) {
-                    console.warn('⚠️ Erro ao acessar localStorage:', localStorageError);
-                }
-
-                // Se não tiver dados da URL, usar localStorage
-                if (!eventData.name && storedData) {
-                    console.log('🔄 Usando dados do localStorage como backup');
-                    const data = JSON.parse(storedData);
-                    eventData = data.eventData || {};
-                    const guests = data.guests || [];
-                    guest = guests.find(g => g.id === guestId) || guest;
-                }
+                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImage: !!imageFromUrl });
                 
-                // Se ainda não tiver dados, criar dados padrão
-                if (!eventData.name) {
-                    console.log('🔄 Criando dados padrão');
-                    eventData = {
-                        name: 'Evento de Teste',
-                        date: new Date().toISOString(),
-                        location: 'Local do Evento',
-                        description: 'Descrição do evento de teste'
-                    };
-                }
+                // Criar objeto de dados do evento
+                const eventData = {
+                    name: eventName || 'Nome do Evento',
+                    date: eventDate || new Date().toISOString(),
+                    location: eventLocation || 'Local do evento',
+                    description: eventDescription || 'Descrição do evento'
+                };
                 
-                if (!guest.nome) {
-                    guest = {
-                        id: guestId,
-                        nome: 'Convidado',
-                        numero: '+5511999999999',
-                        status: 'pending'
-                    };
-                }
+                // Criar objeto do convidado
+                const guest = {
+                    id: guestId,
+                    nome: nameFromUrl ? decodeURIComponent(nameFromUrl) : 'Convidado',
+                    numero: '+5511999999999',
+                    status: 'pending'
+                };
                 
                 console.log('📊 Dados finais:', { eventData, guest });
                 
                 // Preencher dados na página
                 document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
-                document.getElementById('eventName').textContent = eventData.name || 'Nome do Evento';
+                document.getElementById('eventName').textContent = eventData.name;
                 document.getElementById('eventDate').textContent = formatDate(eventData.date);
                 document.getElementById('eventDateTime').textContent = formatDateTime(eventData.date);
-                document.getElementById('eventLocation').textContent = eventData.location || 'Local do evento';
+                document.getElementById('eventLocation').textContent = eventData.location;
+                document.getElementById('eventDescription').textContent = eventData.description;
+                
                 // Mostrar imagem se existir
-                let selectedImage = null;
-                
-                // Priorizar imagem da URL para mobile
-                const imageFromUrl = urlParams.get('image');
-                
                 if (imageFromUrl) {
-                    selectedImage = decodeURIComponent(imageFromUrl);
-                    console.log('🖼️ Imagem encontrada na URL:', selectedImage.substring(0, 100) + '...');
-                    console.log('🖼️ Tamanho da imagem:', selectedImage.length);
-                } else {
-                    // Tentar carregar do localStorage como backup
-                    try {
-                        selectedImage = localStorage.getItem('selectedImage');
-                        console.log('🔍 Procurando imagem no localStorage:', selectedImage);
-                    } catch (imageError) {
-                        console.warn('⚠️ Erro ao acessar imagem do localStorage:', imageError);
-                    }
-                }
-                
-                if (selectedImage && selectedImage !== 'null' && selectedImage !== 'undefined' && selectedImage !== '') {
-                    console.log('🖼️ Carregando imagem...');
+                    console.log('🖼️ Carregando imagem da URL...');
                     const imageContainer = document.getElementById('inviteImage');
                     
-                    // Criar elemento de imagem com 100% aproveitamento
+                    // Criar elemento de imagem
                     const img = document.createElement('img');
-                    img.src = selectedImage;
+                    img.src = decodeURIComponent(imageFromUrl);
                     img.alt = 'Convite';
                     img.style.cssText = `
                         max-width: 100%;
@@ -585,16 +524,13 @@
                     
                     // Tratamento de erro
                     img.onerror = function() {
-                        console.error('❌ Erro ao carregar imagem:', this.src);
-                        console.error('❌ Tamanho da imagem:', this.src.length);
-                        this.style.display = 'none';
+                        console.error('❌ Erro ao carregar imagem');
                         imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Erro ao carregar imagem</p></div>';
                     };
                     
                     // Tratamento de sucesso
                     img.onload = function() {
                         console.log('✅ Imagem carregada com sucesso!');
-                        console.log('✅ Dimensões:', this.naturalWidth, 'x', this.naturalHeight);
                     };
                     
                     // Limpar container e adicionar imagem
@@ -602,11 +538,7 @@
                     imageContainer.appendChild(img);
                     
                 } else {
-                    console.log('❌ Nenhuma imagem selecionada ou imagem inválida');
-                    console.log('Tipo da imagem:', typeof selectedImage);
-                    console.log('Valor da imagem:', selectedImage);
-                    
-                    // Mostrar placeholder
+                    console.log('❌ Nenhuma imagem na URL');
                     const imageContainer = document.getElementById('inviteImage');
                     imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem selecionada</p></div>';
                 }

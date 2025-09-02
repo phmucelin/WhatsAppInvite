@@ -2,6 +2,7 @@
 let guests = [];
 let eventData = {};
 let confirmationLinks = {};
+let selectedImage = null; // Garantir que está definida globalmente
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
@@ -297,53 +298,54 @@ function generateConfirmationLink(guestId = null) {
     // Adicionar timestamp para evitar cache em dispositivos móveis
     const timestamp = Date.now();
     
-    // Adicionar dados do evento na URL para mobile
+    // SEMPRE incluir dados do evento na URL para mobile
     let eventParams = '';
-    if (eventData.name) {
-        eventParams += `&eventName=${encodeURIComponent(eventData.name)}`;
-    }
-    if (eventData.date) {
-        eventParams += `&eventDate=${encodeURIComponent(eventData.date)}`;
-    }
-    if (eventData.location) {
-        eventParams += `&eventLocation=${encodeURIComponent(eventData.location)}`;
-    }
-    if (eventData.description) {
-        eventParams += `&eventDescription=${encodeURIComponent(eventData.description)}`;
-    }
+    eventParams += `&eventName=${encodeURIComponent(eventData.name || 'Evento')}`;
+    eventParams += `&eventDate=${encodeURIComponent(eventData.date || new Date().toISOString())}`;
+    eventParams += `&eventLocation=${encodeURIComponent(eventData.location || 'Local do evento')}`;
+    eventParams += `&eventDescription=${encodeURIComponent(eventData.description || 'Descrição do evento')}`;
     
-    // Adicionar nome do convidado se disponível (apenas se não for muito longo)
+    // Adicionar nome do convidado se disponível
     let nameParam = '';
     if (guestId) {
         const guest = guests.find(g => g.id === guestId);
-        if (guest && guest.nome && guest.nome.length < 50) {
+        if (guest && guest.nome) {
             nameParam = `&name=${encodeURIComponent(guest.nome)}`;
         }
     }
     
-    // Incluir imagem na URL para mobile (sem compressão assíncrona)
+    // SEMPRE incluir imagem na URL (comprimida se necessário)
     let imageParam = '';
     if (selectedImage) {
-        try {
-            // Se a imagem for muito grande, usar versão simplificada
-            if (selectedImage.length > 200000) {
-                console.log('🖼️ Imagem muito grande, usando versão simplificada');
-                // Para imagens muito grandes, não incluir na URL
-                // O mobile usará dados padrão
-            } else {
-                imageParam = `&image=${encodeURIComponent(selectedImage)}`;
-                console.log('🖼️ Imagem incluída na URL');
-            }
-        } catch (error) {
-            console.error('❌ Erro ao processar imagem:', error);
-            // Se der erro, não incluir imagem
+        // Se a imagem for muito grande, comprimir antes de incluir
+        if (selectedImage.length > 100000) {
+            // Comprimir imagem para base64 menor
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                const maxWidth = 600;
+                const ratio = maxWidth / img.width;
+                canvas.width = maxWidth;
+                canvas.height = img.height * ratio;
+                
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const compressedImage = canvas.toDataURL('image/jpeg', 0.7);
+                
+                // Atualizar selectedImage com versão comprimida
+                selectedImage = compressedImage;
+                console.log('🖼️ Imagem comprimida para:', compressedImage.length);
+            };
+            img.src = selectedImage;
         }
+        
+        imageParam = `&image=${encodeURIComponent(selectedImage)}`;
     }
     
     if (guestId) {
         // Usar a nova página de convite personalizada
         const finalUrl = `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}${eventParams}${imageParam}&t=${timestamp}`;
-        console.log('🔗 URL gerada:', finalUrl.substring(0, 200) + '...');
         return finalUrl;
     }
     return `${baseUrl}?event=${encodedEvent}&t=${timestamp}`;
@@ -908,53 +910,68 @@ async function testWhatsAppAPI() {
 }
 
 // Variável global para armazenar a imagem selecionada
-let selectedImage = null;
+// let selectedImage = null; // Garantir que está definida globalmente
 
-// Função para gerenciar seleção de imagem
-function handleImageSelection(event) {
-    const selectedValue = event.target.value;
+// Função para lidar com seleção de imagem
+function handleImageSelection() {
+    const select = document.getElementById('inviteImage');
+    const customUpload = document.getElementById('customImageUpload');
+    const imagePreview = document.getElementById('imagePreview');
     
-    if (selectedValue === 'custom') {
-        // Abrir seletor de arquivo
-        document.getElementById('customImageUpload').click();
-    } else if (selectedValue === '') {
-        // Remover imagem
-        removeImage();
-    } else {
+    if (select.value === 'custom') {
+        customUpload.click();
+    } else if (select.value) {
         // Imagem pré-definida
-        selectedImage = selectedValue;
-        showImagePreview(selectedValue);
-        // Salvar imagem no localStorage
-        localStorage.setItem('selectedImage', selectedImage);
+        selectedImage = select.value;
+        console.log('🖼️ Imagem pré-definida selecionada:', selectedImage);
+        showImagePreview(selectedImage);
+        
+        // Salvar no localStorage
+        try {
+            localStorage.setItem('selectedImage', selectedImage);
+            console.log('💾 Imagem salva no localStorage');
+        } catch (error) {
+            console.error('❌ Erro ao salvar imagem no localStorage:', error);
+        }
+    } else {
+        // Sem imagem
+        selectedImage = null;
+        imagePreview.style.display = 'none';
+        console.log('🖼️ Nenhuma imagem selecionada');
+        
+        // Remover do localStorage
+        try {
+            localStorage.removeItem('selectedImage');
+            console.log('🗑️ Imagem removida do localStorage');
+        } catch (error) {
+            console.error('❌ Erro ao remover imagem do localStorage:', error);
+        }
     }
+    
+    updateInvitePreview();
 }
 
-// Função para gerenciar upload de imagem customizada
+// Função para lidar com upload de imagem customizada
 function handleCustomImageUpload(event) {
     const file = event.target.files[0];
     if (file) {
-        // Verificar se é uma imagem
-        if (!file.type.startsWith('image/')) {
-            showNotification('❌ Por favor, selecione apenas arquivos de imagem!', 'error');
-            return;
-        }
-        
-        // Verificar tamanho (máximo 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showNotification('❌ A imagem deve ter menos de 5MB!', 'error');
-            return;
-        }
-        
-        // Converter para URL
         const reader = new FileReader();
         reader.onload = function(e) {
             selectedImage = e.target.result;
-            console.log('🖼️ Imagem carregada:', selectedImage.substring(0, 100) + '...');
+            console.log('🖼️ Imagem customizada carregada:', selectedImage.substring(0, 100) + '...');
+            console.log('🖼️ Tamanho da imagem:', selectedImage.length);
+            
             showImagePreview(selectedImage);
-            // Salvar imagem no localStorage
-            localStorage.setItem('selectedImage', selectedImage);
-            console.log('💾 Imagem salva no localStorage');
-            showNotification('✅ Imagem carregada com sucesso!', 'success');
+            
+            // Salvar no localStorage
+            try {
+                localStorage.setItem('selectedImage', selectedImage);
+                console.log('💾 Imagem customizada salva no localStorage');
+            } catch (error) {
+                console.error('❌ Erro ao salvar imagem customizada no localStorage:', error);
+            }
+            
+            updateInvitePreview();
         };
         reader.readAsDataURL(file);
     }
@@ -972,25 +989,46 @@ function showImagePreview(imageSrc) {
 // Função para remover imagem
 function removeImage() {
     selectedImage = null;
-    document.getElementById('imagePreview').style.display = 'none';
     document.getElementById('inviteImage').value = '';
-    document.getElementById('customImageUpload').value = '';
-    // Remover imagem do localStorage
-    localStorage.removeItem('selectedImage');
-    showNotification('🗑️ Imagem removida!', 'info');
+    document.getElementById('imagePreview').style.display = 'none';
+    console.log('🗑️ Imagem removida');
+    
+    // Remover do localStorage
+    try {
+        localStorage.removeItem('selectedImage');
+        console.log('🗑️ Imagem removida do localStorage');
+    } catch (error) {
+        console.error('❌ Erro ao remover imagem do localStorage:', error);
+    }
+    
+    updateInvitePreview();
 }
 
-// Função para carregar imagem salva do localStorage
+// Função para carregar imagem salva
 function loadSavedImage() {
-    const savedImage = localStorage.getItem('selectedImage');
-    if (savedImage && savedImage !== 'null' && savedImage !== 'undefined') {
-        selectedImage = savedImage;
-        showImagePreview(savedImage);
-        
-        // Marcar o select como custom se for uma imagem customizada
-        if (savedImage.startsWith('data:image/')) {
-            document.getElementById('inviteImage').value = 'custom';
+    try {
+        const savedImage = localStorage.getItem('selectedImage');
+        if (savedImage && savedImage !== 'null' && savedImage !== 'undefined') {
+            selectedImage = savedImage;
+            console.log('🔄 Imagem salva carregada do localStorage');
+            console.log('🖼️ Tamanho da imagem:', selectedImage.length);
+            
+            // Verificar se é uma imagem customizada (base64)
+            if (savedImage.startsWith('data:image/')) {
+                document.getElementById('inviteImage').value = 'custom';
+                showImagePreview(savedImage);
+            } else {
+                // Imagem pré-definida
+                document.getElementById('inviteImage').value = savedImage;
+                showImagePreview(savedImage);
+            }
+            
+            console.log('✅ Imagem salva carregada com sucesso');
+        } else {
+            console.log('ℹ️ Nenhuma imagem salva encontrada');
         }
+    } catch (error) {
+        console.error('❌ Erro ao carregar imagem salva:', error);
     }
 }
 
