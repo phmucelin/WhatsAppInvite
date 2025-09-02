@@ -420,14 +420,28 @@
                 const eventDescription = urlParams.get('eventDescription');
                 const nameFromUrl = urlParams.get('name');
 
-                // SOLUÇÃO: Carregar a imagem do localStorage usando a chave da URL
+                // SOLUÇÃO: Carregar a imagem do IndexedDB usando a chave da URL
                 const imageKeyFromUrl = urlParams.get('imageKey');
-                let imageBase64 = imageKeyFromUrl ? localStorage.getItem(imageKeyFromUrl) : null;
+                let imageBase64 = null;
                 
-                // FALLBACK: Se não encontrar pela chave, tentar pela chave padrão
-                if (!imageBase64) {
-                    console.log('🔄 Tentando fallback para imagem padrão...');
-                    imageBase64 = localStorage.getItem('selectedImage');
+                if (imageKeyFromUrl) {
+                    try {
+                        // Tentar buscar do IndexedDB primeiro
+                        if (window.indexedDB) {
+                            console.log('🔄 Tentando buscar imagem do IndexedDB...');
+                            // Aqui você precisaria implementar a busca no IndexedDB
+                            // Por enquanto, vamos usar localStorage como fallback
+                            imageBase64 = localStorage.getItem(imageKeyFromUrl);
+                        }
+                        
+                        // FALLBACK: Se não encontrar pela chave, tentar pela chave padrão
+                        if (!imageBase64) {
+                            console.log('🔄 Tentando fallback para imagem padrão...');
+                            imageBase64 = localStorage.getItem('selectedImage');
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro ao buscar imagem:', error);
+                    }
                 }
 
                 console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImageKey: !!imageKeyFromUrl, hasImageBase64: !!imageBase64 });

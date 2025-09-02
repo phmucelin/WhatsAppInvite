@@ -100,15 +100,8 @@ function setupEventListeners() {
 
 // Funções de carregamento de dados
 function loadDefaultCSV() {
-    fetch('Untitled spreadsheet - Sheet1.csv')
-        .then(response => response.text())
-        .then(data => {
-            parseCSVData(data);
-            updateDashboard();
-        })
-        .catch(error => {
-            console.log('Arquivo CSV padrão não encontrado, você pode fazer upload de um arquivo.');
-        });
+    // Não tentar carregar CSV padrão se não existir
+    console.log('ℹ️ Nenhum CSV padrão configurado. Faça upload de um arquivo CSV.');
 }
 
 function handleCSVUpload(event) {
@@ -322,7 +315,7 @@ function compressImage(imageDataUrl, maxWidth = 800, quality = 0.8) {
 }
 
 // Função para gerar link de confirmação com fallback para mobile
-function generateConfirmationLink(guestId = null) {
+async function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
     
     // Detectar se está rodando localmente ou em servidor
@@ -358,16 +351,16 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SOLUÇÃO REAL: Usar localStorage com ID único
+    // SOLUÇÃO REAL: Usar IndexedDB para imagens (sem limite de quota)
     let imageParam = '';
     if (selectedImage) {
         try {
             // Gerar ID único para a imagem
             const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
-            // Salvar imagem no localStorage com ID único
-            localStorage.setItem(imageId, selectedImage);
-            console.log('💾 Imagem salva com ID:', imageId);
+            // Salvar imagem no IndexedDB (sem limite de quota)
+            await saveImageToDB(imageId, selectedImage);
+            console.log('💾 Imagem salva no IndexedDB:', imageId);
             
             // Incluir apenas o ID na URL
             imageParam = `&imageKey=${imageId}`;
@@ -1592,6 +1585,12 @@ function initDatabase() {
                 confirmationStore.createIndex('guestId', 'guestId', { unique: false });
                 confirmationStore.createIndex('timestamp', 'timestamp', { unique: false });
             }
+            
+            // Store para imagens
+            if (!db.objectStoreNames.contains('images')) {
+                const imageStore = db.createObjectStore('images', { keyPath: 'id' });
+                imageStore.createIndex('timestamp', 'timestamp', { unique: false });
+            }
         };
     });
 }
@@ -1603,23 +1602,29 @@ async function saveGuestsToDB(guestsArray, eventId) {
     const transaction = db.transaction(['guests'], 'readwrite');
     const store = transaction.objectStore('guests');
     
-    // Limpar convidados antigos do evento
-    const oldGuests = await getGuestsFromDB(eventId);
-    oldGuests.forEach(guest => store.delete(guest.id));
-    
-    // Adicionar novos convidados
-    const promises = guestsArray.map(guest => {
-        const guestData = {
-            ...guest,
-            eventId: eventId,
-            status: guest.status || 'pending',
-            createdAt: Date.now()
-        };
-        return store.add(guestData);
-    });
-    
-    await Promise.all(promises);
-    console.log('💾 Convidados salvos no banco:', guestsArray.length);
+    try {
+        // Limpar convidados antigos do evento
+        const oldGuests = await getGuestsFromDB(eventId);
+        for (const guest of oldGuests) {
+            await store.delete(guest.id);
+        }
+        
+        // Adicionar novos convidados
+        for (const guest of guestsArray) {
+            const guestData = {
+                ...guest,
+                eventId: eventId,
+                status: guest.status || 'pending',
+                createdAt: Date.now()
+            };
+            await store.add(guestData);
+        }
+        
+        console.log('💾 Convidados salvos no banco:', guestsArray.length);
+    } catch (error) {
+        console.error('❌ Erro ao salvar convidados:', error);
+        throw error;
+    }
 }
 
 // Buscar convidados do banco
@@ -1697,4 +1702,31 @@ async function loadDataFromDB() {
     } catch (error) {
         console.error('❌ Erro ao carregar do banco:', error);
     }
+} 
+
+// Salvar imagem no banco
+async function saveImageToDB(imageId, imageData) {
+    if (!db) await initDatabase();
+    
+    const transaction = db.transaction(['images'], 'readwrite');
+    const store = transaction.objectStore('images');
+    
+    await store.add({
+        id: imageId,
+        data: imageData,
+        timestamp: Date.now()
+    });
+    
+    console.log('💾 Imagem salva no IndexedDB:', imageId);
+}
+
+// Buscar imagem do banco
+async function getImageFromDB(imageId) {
+    if (!db) await initDatabase();
+    
+    const transaction = db.transaction(['images'], 'readonly');
+    const store = transaction.objectStore('images');
+    
+    const image = await store.get(imageId);
+    return image ? image.data : null;
 } 
