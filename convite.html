@@ -422,7 +422,13 @@
 
                 // SOLUÇÃO: Carregar a imagem do localStorage usando a chave da URL
                 const imageKeyFromUrl = urlParams.get('imageKey');
-                const imageBase64 = imageKeyFromUrl ? localStorage.getItem(imageKeyFromUrl) : null;
+                let imageBase64 = imageKeyFromUrl ? localStorage.getItem(imageKeyFromUrl) : null;
+                
+                // FALLBACK: Se não encontrar pela chave, tentar pela chave padrão
+                if (!imageBase64) {
+                    console.log('🔄 Tentando fallback para imagem padrão...');
+                    imageBase64 = localStorage.getItem('selectedImage');
+                }
 
                 console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImageKey: !!imageKeyFromUrl, hasImageBase64: !!imageBase64 });
 
@@ -456,6 +462,9 @@
                 let imageLoaded = false;
                 if (imageBase64) {
                     console.log('🖼️ Tentando carregar imagem do localStorage...');
+                    console.log('🖼️ Tamanho da imagem:', imageBase64.length);
+                    console.log('🖼️ Primeiros 100 caracteres:', imageBase64.substring(0, 100));
+                    
                     try {
                         loadImageToContainer(imageBase64);
                         imageLoaded = true;
@@ -463,6 +472,9 @@
                     } catch (error) {
                         console.error('❌ Erro ao carregar imagem do localStorage:', error);
                     }
+                } else {
+                    console.log('❌ Nenhuma imagem encontrada no localStorage');
+                    console.log('🔍 Chaves disponíveis:', Object.keys(localStorage).filter(key => key.includes('img') || key.includes('selected')));
                 }
                 
                 // Se nenhuma imagem carregou, mostrar placeholder
@@ -522,22 +534,35 @@
         // Função para confirmar presença
         function confirmPresence(status) {
             try {
+                const guestId = new URLSearchParams(window.location.search).get('guest');
+                
+                // Carregar lista de convidados do localStorage
+                const savedGuests = localStorage.getItem('guests');
+                if (savedGuests) {
+                    const guests = JSON.parse(savedGuests);
+                    const guestIndex = guests.findIndex(g => g.id === guestId);
+                    
+                    if (guestIndex !== -1) {
+                        // Atualizar status do convidado
+                        guests[guestIndex].status = status;
+                        localStorage.setItem('guests', JSON.stringify(guests));
+                        
+                        // Salvar timestamp da última atualização
+                        localStorage.setItem('lastConfirmationUpdate', Date.now().toString());
+                        
+                        console.log('✅ Status atualizado:', guests[guestIndex].nome, '->', status);
+                    }
+                }
+                
                 // Tentar notificar a aplicação principal
                 if (window.opener) {
                     window.opener.postMessage({
                         type: 'confirmation_update',
-                        guestId: new URLSearchParams(window.location.search).get('guest'),
+                        guestId: guestId,
                         status: status
                     }, '*');
+                    console.log('📤 Mensagem enviada para aplicação principal');
                 }
-                
-                // Salvar status no localStorage para persistência
-                const updateData = {
-                    guestId: new URLSearchParams(window.location.search).get('guest'),
-                    status: status,
-                    timestamp: Date.now()
-                };
-                localStorage.setItem('lastConfirmationUpdate', JSON.stringify(updateData));
                 
                 // Mostrar mensagem de confirmação
                 showConfirmationMessage(status);
