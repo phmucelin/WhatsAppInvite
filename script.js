@@ -321,34 +321,18 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SEMPRE incluir imagem na URL para mobile (convertida para base64)
+    // Incluir imagem na URL para mobile (sem compressão assíncrona)
     let imageParam = '';
     if (selectedImage) {
         try {
-            // Se a imagem for data URL (base64), usar diretamente
-            if (selectedImage.startsWith('data:image/')) {
-                // Para imagens muito grandes, comprimir automaticamente
-                if (selectedImage.length > 100000) {
-                    console.log('🖼️ Imagem muito grande, comprimindo automaticamente...');
-                    // Usar compressão automática
-                    compressImage(selectedImage, 800, 0.8)
-                        .then(compressedImage => {
-                            console.log('✅ Imagem comprimida com sucesso!');
-                            // Atualizar selectedImage com versão comprimida
-                            selectedImage = compressedImage;
-                        })
-                        .catch(error => {
-                            console.error('❌ Erro na compressão:', error);
-                            // Usar imagem original se compressão falhar
-                        });
-                }
-                
-                imageParam = `&image=${encodeURIComponent(selectedImage)}`;
-                console.log('🖼️ Imagem incluída na URL (base64)');
+            // Se a imagem for muito grande, usar versão simplificada
+            if (selectedImage.length > 200000) {
+                console.log('🖼️ Imagem muito grande, usando versão simplificada');
+                // Para imagens muito grandes, não incluir na URL
+                // O mobile usará dados padrão
             } else {
-                // Se for URL externa, incluir como está
                 imageParam = `&image=${encodeURIComponent(selectedImage)}`;
-                console.log('🖼️ Imagem incluída na URL (URL externa)');
+                console.log('🖼️ Imagem incluída na URL');
             }
         } catch (error) {
             console.error('❌ Erro ao processar imagem:', error);
@@ -427,33 +411,61 @@ function openWhatsAppWeb() {
 }
 
 function prepareMessages() {
-    const messageTemplate = document.getElementById('messageTemplate').value;
-    
-    // Gerar mensagens para cada convidado com link único
-    const messages = guests.map(guest => {
-        const confirmationLink = generateConfirmationLink(guest.id);
+    try {
+        // Validar dados necessários
+        if (!eventData.name) {
+            alert('Por favor, preencha o nome do evento.');
+            return;
+        }
         
-        // Criar mensagem mais compacta para evitar URLs muito longas
-        let message = messageTemplate
-            .replace(/{nome}/g, guest.nome)
-            .replace(/{evento}/g, eventData.name || 'Evento')
-            .replace(/{data}/g, formatDate(eventData.date) || 'Data')
-            .replace(/{hora}/g, formatTime(eventData.date) || 'Hora')
-            .replace(/{local}/g, eventData.location || 'Local')
-            .replace(/{descricao}/g, eventData.description || 'Descrição')
-            .replace(/{link}/g, confirmationLink);
+        if (!eventData.date) {
+            alert('Por favor, preencha a data do evento.');
+            return;
+        }
         
-        return {
-            guest: guest,
-            message: message,
-            phone: guest.numero,
-            imageUrl: selectedImage,
-            confirmationLink: confirmationLink
-        };
-    });
-    
-    // Criar interface de envio
-    createMessageInterface(messages);
+        if (guests.length === 0) {
+            alert('Por favor, carregue uma lista de convidados.');
+            return;
+        }
+        
+        const messageTemplate = document.getElementById('messageTemplate').value;
+        if (!messageTemplate.trim()) {
+            alert('Por favor, preencha o modelo de mensagem.');
+            return;
+        }
+        
+        console.log('✅ Dados validados, preparando mensagens...');
+        
+        // Gerar mensagens para cada convidado com link único
+        const messages = guests.map(guest => {
+            const confirmationLink = generateConfirmationLink(guest.id);
+            
+            // Criar mensagem mais compacta para evitar URLs muito longas
+            let message = messageTemplate
+                .replace(/{nome}/g, guest.nome)
+                .replace(/{evento}/g, eventData.name || 'Evento')
+                .replace(/{data}/g, formatDate(eventData.date) || 'Data')
+                .replace(/{hora}/g, formatTime(eventData.date) || 'Hora')
+                .replace(/{local}/g, eventData.location || 'Local')
+                .replace(/{descricao}/g, eventData.description || 'Descrição')
+                .replace(/{link}/g, confirmationLink);
+            
+            return {
+                guest: guest,
+                message: message,
+                phone: guest.numero,
+                imageUrl: selectedImage,
+                confirmationLink: confirmationLink
+            };
+        });
+        
+        // Criar interface de envio
+        createMessageInterface(messages);
+        
+    } catch (error) {
+        console.error('❌ Erro ao preparar mensagens:', error);
+        alert('Erro ao preparar mensagens. Tente novamente.');
+    }
 }
 
 function createMessageInterface(messages) {
@@ -558,49 +570,83 @@ function createMessageInterface(messages) {
 
 // Função para abrir WhatsApp com mensagem formatada
 function openWhatsAppWithMessage(phone, message) {
-    // Limpar e formatar número de telefone
-    let cleanPhone = phone.replace(/\D/g, '');
-    
-    // Adicionar código do país se não tiver
-    if (!cleanPhone.startsWith('55')) {
-        cleanPhone = '55' + cleanPhone;
+    try {
+        // Limpar e formatar número de telefone
+        let cleanPhone = phone.replace(/\D/g, '');
+        
+        // Adicionar código do país se não tiver
+        if (!cleanPhone.startsWith('55')) {
+            cleanPhone = '55' + cleanPhone;
+        }
+        
+        // Verificar se o número é válido
+        if (cleanPhone.length < 10) {
+            alert('Número de telefone inválido: ' + phone);
+            return;
+        }
+        
+        // Codificar mensagem para URL
+        const encodedMessage = encodeURIComponent(message);
+        
+        // Criar link do WhatsApp
+        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+        
+        console.log('📱 Abrindo WhatsApp:', whatsappUrl);
+        console.log('📱 Número formatado:', cleanPhone);
+        console.log('📱 Mensagem:', message.substring(0, 100) + '...');
+        
+        // Abrir em nova aba
+        window.open(whatsappUrl, '_blank');
+        
+    } catch (error) {
+        console.error('❌ Erro ao abrir WhatsApp:', error);
+        alert('Erro ao abrir WhatsApp. Tente novamente.');
     }
-    
-    // Codificar mensagem para URL
-    const encodedMessage = encodeURIComponent(message);
-    
-    // Criar link do WhatsApp
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-    
-    console.log('📱 Abrindo WhatsApp:', whatsappUrl);
-    
-    // Abrir em nova aba
-    window.open(whatsappUrl, '_blank');
 }
 
 // Função para enviar mensagem individual
 function sendSingleMessage(guestId) {
-    const guest = guests.find(g => g.id === guestId);
-    if (!guest) return;
-    
-    const messageTemplate = document.getElementById('messageTemplate').value;
-    const confirmationLink = generateConfirmationLink(guest.id);
-    
-    // Criar mensagem compacta
-    let message = messageTemplate
-        .replace(/{nome}/g, guest.nome)
-        .replace(/{evento}/g, eventData.name || 'Evento')
-        .replace(/{data}/g, formatDate(eventData.date) || 'Data')
-        .replace(/{hora}/g, formatTime(eventData.date) || 'Hora')
-        .replace(/{local}/g, eventData.location || 'Local')
-        .replace(/{descricao}/g, eventData.description || 'Descrição')
-        .replace(/{link}/g, confirmationLink);
-    
-    // Abrir WhatsApp com mensagem
-    openWhatsAppWithMessage(guest.numero, message);
-    
-    // Marcar como enviado
-    markAsSent(guestId);
+    try {
+        const guest = guests.find(g => g.id === guestId);
+        if (!guest) {
+            console.error('❌ Convidado não encontrado:', guestId);
+            alert('Convidado não encontrado. Tente novamente.');
+            return;
+        }
+        
+        if (!guest.numero) {
+            console.error('❌ Número não encontrado para:', guest.nome);
+            alert('Número de telefone não encontrado para ' + guest.nome);
+            return;
+        }
+        
+        const messageTemplate = document.getElementById('messageTemplate').value;
+        const confirmationLink = generateConfirmationLink(guest.id);
+        
+        // Criar mensagem compacta
+        let message = messageTemplate
+            .replace(/{nome}/g, guest.nome)
+            .replace(/{evento}/g, eventData.name || 'Evento')
+            .replace(/{data}/g, formatDate(eventData.date) || 'Data')
+            .replace(/{hora}/g, formatTime(eventData.date) || 'Hora')
+            .replace(/{local}/g, eventData.location || 'Local')
+            .replace(/{descricao}/g, eventData.description || 'Descrição')
+            .replace(/{link}/g, confirmationLink);
+        
+        console.log('📤 Enviando mensagem para:', guest.nome);
+        console.log('📱 Número:', guest.numero);
+        console.log('🔗 Link:', confirmationLink);
+        
+        // Abrir WhatsApp com mensagem
+        openWhatsAppWithMessage(guest.numero, message);
+        
+        // Marcar como enviado
+        markAsSent(guestId);
+        
+    } catch (error) {
+        console.error('❌ Erro ao enviar mensagem:', error);
+        alert('Erro ao enviar mensagem. Tente novamente.');
+    }
 }
 
 function copyMessageToClipboard(message) {
