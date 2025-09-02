@@ -916,6 +916,8 @@ function updateDashboard() {
     const declined = guests.filter(g => g.status === 'declined').length;
     const pending = guests.filter(g => g.status === 'pending').length;
     
+    console.log('📊 Atualizando dashboard:', { total, confirmed, declined, pending });
+    
     document.getElementById('totalInvites').textContent = total;
     document.getElementById('confirmedInvites').textContent = confirmed;
     document.getElementById('declinedInvites').textContent = declined;
@@ -1142,6 +1144,8 @@ async function sendAllMessagesViaAPI() {
 function updateGuestsList() {
     const container = document.querySelector('.list-container');
     
+    console.log('📋 Atualizando lista de convidados:', guests);
+    
     if (guests.length === 0) {
         container.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">Nenhum convidado carregado</p>';
         return;
@@ -1158,6 +1162,8 @@ function updateGuestsList() {
             </div>
         </div>
     `).join('');
+    
+    console.log('✅ Lista de convidados atualizada');
 }
 
 function getStatusText(status) {
@@ -1186,355 +1192,250 @@ function handleConfirmation(guestId, status) {
     }
 }
 
-function showConfirmationMessage(message) {
-    // Criar overlay de confirmação
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-    `;
-    
-    const messageBox = document.createElement('div');
-    messageBox.style.cssText = `
-        background: white;
-        padding: 40px;
-        border-radius: 15px;
-        text-align: center;
-        max-width: 400px;
-        margin: 20px;
-    `;
-    
-    messageBox.innerHTML = `
-        <h3 style="color: #667eea; margin-bottom: 20px;">Confirmação Recebida!</h3>
-        <p style="font-size: 1.1rem; margin-bottom: 20px;">${message}</p>
-        <button onclick="this.parentElement.parentElement.remove()" 
-                style="background: #667eea; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer;">
-            Fechar
-        </button>
-    `;
-    
-    overlay.appendChild(messageBox);
-    document.body.appendChild(overlay);
-}
-
-// Funções utilitárias
-function formatDate(dateString) {
-    if (!dateString) return 'Data não definida';
-    
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-function formatTime(dateString) {
-    if (!dateString) return 'Hora não definida';
-    
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function getNextSaturday() {
-    const today = new Date();
-    const daysUntilSaturday = (6 - today.getDay() + 7) % 7;
-    const nextSaturday = new Date(today);
-    nextSaturday.setDate(today.getDate() + daysUntilSaturday);
-    nextSaturday.setHours(19, 0, 0, 0); // 19:00
-    
-    return nextSaturday.toISOString().slice(0, 16);
-}
-
-function showSendProgress() {
-    document.getElementById('sendProgress').classList.remove('hidden');
-    document.getElementById('progressFill').style.width = '0%';
-    document.getElementById('progressText').textContent = 'Preparando envio...';
-}
-
-// Função para salvar dados
-function saveData() {
-    try {
-        localStorage.setItem('guests', JSON.stringify(guests));
-        localStorage.setItem('eventData', JSON.stringify(eventData));
-        
-        // Limpar imagens antigas do localStorage (manter apenas as últimas 5)
-        cleanupOldImages();
-    } catch (error) {
-        console.error('❌ Erro ao salvar dados:', error);
-    }
-}
-
-// Função para limpar imagens antigas do localStorage
-function cleanupOldImages() {
-    try {
-        const keys = Object.keys(localStorage);
-        const imageKeys = keys.filter(key => key.startsWith('img_'));
-        
-        if (imageKeys.length > 5) {
-            // Manter apenas as 5 imagens mais recentes
-            const sortedKeys = imageKeys.sort((a, b) => {
-                const aTime = localStorage.getItem(a + '_time') || 0;
-                const bTime = localStorage.getItem(b + '_time') || 0;
-                return bTime - aTime;
-            });
-            
-            // Remover imagens antigas
-            sortedKeys.slice(5).forEach(key => {
-                localStorage.removeItem(key);
-                localStorage.removeItem(key + '_time');
-                console.log('🗑️ Imagem antiga removida:', key);
-            });
+        // Função para confirmar presença (escopo global)
+        function confirmPresence(status) {
+            try {
+                const guestId = new URLSearchParams(window.location.search).get('g') || new URLSearchParams(window.location.search).get('guest');
+                
+                console.log('✅ Confirmando presença:', { guestId, status });
+                
+                // Carregar lista de convidados do localStorage
+                const savedGuests = localStorage.getItem('guests');
+                if (savedGuests) {
+                    const guests = JSON.parse(savedGuests);
+                    const guestIndex = guests.findIndex(g => g.id === guestId);
+                    
+                    if (guestIndex !== -1) {
+                        // Atualizar status do convidado
+                        guests[guestIndex].status = status;
+                        localStorage.setItem('guests', JSON.stringify(guests));
+                        
+                        // Salvar timestamp da última atualização
+                        const updateData = {
+                            guestId: guestId,
+                            status: status,
+                            timestamp: Date.now()
+                        };
+                        localStorage.setItem('lastConfirmationUpdate', JSON.stringify(updateData));
+                        
+                        console.log('✅ Status atualizado:', guests[guestIndex].nome, '->', status);
+                    } else {
+                        console.log('⚠️ Convidado não encontrado na lista:', guestId);
+                    }
+                } else {
+                    console.log('⚠️ Lista de convidados não encontrada no localStorage');
+                }
+                
+                // Tentar notificar a aplicação principal
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'confirmation_update',
+                        guestId: guestId,
+                        status: status
+                    }, '*');
+                    console.log('📤 Mensagem enviada para aplicação principal');
+                }
+                
+                // Mostrar mensagem de confirmação
+                showConfirmationMessage(status);
+                
+            } catch (error) {
+                console.error('Erro ao confirmar presença:', error);
+                alert('Erro ao confirmar presença. Tente novamente.');
+            }
         }
-    } catch (error) {
-        console.error('❌ Erro ao limpar imagens antigas:', error);
-    }
-}
 
-// Função para carregar dados salvos
-function loadStoredData() {
-    try {
-        const savedGuests = localStorage.getItem('guests');
-        const savedEventData = localStorage.getItem('eventData');
-        
-        if (savedGuests) {
-            guests = JSON.parse(savedGuests);
-            console.log('📊 Convidados carregados:', guests.length);
-        }
-        
-        if (savedEventData) {
-            eventData = JSON.parse(savedEventData);
+        // Função para mostrar mensagem de confirmação
+        function showConfirmationMessage(status) {
+            const mainContent = document.querySelector('.invite-container');
+            const statusText = status === 'confirmed' ? 'Presença Confirmada!' : 'Presença Declinada';
+            const statusIcon = status === 'confirmed' ? '✅' : '❌';
+            const statusColor = status === 'confirmed' ? '#4CAF50' : '#f44336';
             
-            // Preencher campos do evento
-            document.getElementById('eventName').value = eventData.name || '';
-            document.getElementById('eventDate').value = eventData.date || '';
-            document.getElementById('eventLocation').value = eventData.location || '';
-            document.getElementById('eventDescription').value = eventData.description || '';
-        }
-        
-        updateDashboard();
-    } catch (error) {
-        console.error('❌ Erro ao carregar dados:', error);
-    }
-}
-
-// Verificar se é uma página de confirmação
-function checkConfirmationPage() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isConfirmation = urlParams.get('confirm');
-    const eventId = urlParams.get('event');
-    const guestId = urlParams.get('guest');
-    const status = urlParams.get('status');
-    
-    if (isConfirmation && eventId) {
-        showConfirmationPage(eventId, guestId, status);
-    }
-}
-
-function showConfirmationPage(eventId, guestId, status) {
-    // Limpar página atual
-    document.body.innerHTML = '';
-    
-    // Carregar dados do evento para mostrar informações
-    const stored = localStorage.getItem('whatsappInvitesData');
-    let eventInfo = { name: 'Evento', date: 'Data não definida', location: 'Local não definido' };
-    
-    if (stored) {
-        try {
-            const data = JSON.parse(stored);
-            eventInfo = data.eventData || eventInfo;
-        } catch (error) {
-            console.error('Erro ao carregar dados do evento:', error);
-        }
-    }
-    
-    // Criar página de confirmação
-    const confirmationPage = `
-        <div style="
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        ">
-            <div style="
-                background: white;
-                padding: 40px;
-                border-radius: 20px;
-                text-align: center;
-                max-width: 500px;
-                width: 100%;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            ">
-                <h2 style="color: #667eea; margin-bottom: 20px;">Confirmação de Presença</h2>
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-                    <h3 style="margin: 0 0 10px 0; color: #333;">${eventInfo.name}</h3>
-                    <p style="margin: 5px 0; color: #666;">📅 ${formatDate(eventInfo.date)}</p>
-                    <p style="margin: 5px 0; color: #666;">📍 ${eventInfo.location}</p>
-                </div>
-                <p style="margin-bottom: 30px; font-size: 1.1rem;">
-                    Você confirma sua presença neste evento?
-                </p>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button onclick="confirmPresence('${guestId}', 'confirmed')" 
-                            style="
-                                background: #28a745;
-                                color: white;
-                                border: none;
-                                padding: 15px 30px;
-                                border-radius: 10px;
-                                font-size: 1rem;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: all 0.3s ease;
-                            "
-                            onmouseover="this.style.transform='scale(1.05)'"
-                            onmouseout="this.style.transform='scale(1)'">
-                        ✅ Confirmar Presença
-                    </button>
-                    <button onclick="confirmPresence('${guestId}', 'declined')" 
-                            style="
-                                background: #dc3545;
-                                color: white;
-                                border: none;
-                                padding: 15px 30px;
-                                border-radius: 10px;
-                                font-size: 1rem;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: all 0.3s ease;
-                            "
-                            onmouseover="this.style.transform='scale(1.05)'"
-                            onmouseout="this.style.transform='scale(1)'">
-                        ❌ Não Posso Ir
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.innerHTML = confirmationPage;
-}
-
-function confirmPresence(guestId, status) {
-    // Carregar dados salvos
-    const stored = localStorage.getItem('whatsappInvitesData');
-    if (stored) {
-        const data = JSON.parse(stored);
-        const guests = data.guests || [];
-        
-        // Encontrar e atualizar o convidado
-        const guest = guests.find(g => g.id === guestId);
-        if (guest) {
-            guest.status = status;
-            
-            // Salvar dados atualizados
-            data.guests = guests;
-            localStorage.setItem('whatsappInvitesData', JSON.stringify(data));
-            
-            // Mostrar confirmação
-            const isConfirmed = status === 'confirmed';
-            const message = isConfirmed 
-                ? 'Presença confirmada! Obrigado!' 
-                : 'Entendido. Obrigado pela resposta!';
-            
-            const icon = isConfirmed ? '✅' : '❌';
-            const color = isConfirmed ? '#28a745' : '#dc3545';
-            
-            document.body.innerHTML = `
+            mainContent.innerHTML = `
                 <div style="
-                    min-height: 100vh;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    padding: 20px;
+                    text-align: center;
+                    padding: 60px 30px;
+                    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                    border-radius: 20px;
+                    color: white;
+                    animation: spectacularEntry 0.8s ease-out;
                 ">
                     <div style="
-                        background: white;
-                        padding: 40px;
-                        border-radius: 20px;
-                        text-align: center;
-                        max-width: 400px;
-                        width: 100%;
-                        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-                        animation: fadeIn 0.5s ease-in;
+                        font-size: 4em;
+                        margin-bottom: 20px;
+                        animation: iconBounce 1s ease-out 0.3s both;
                     ">
-                        <div style="
-                            font-size: 4rem;
-                            margin-bottom: 20px;
-                            animation: bounce 1s ease-in-out;
-                        ">
-                            ${icon}
+                        ${statusIcon}
                     </div>
-                        <h3 style="color: ${color}; margin-bottom: 20px; font-size: 1.5rem;">
-                            ${isConfirmed ? 'Presença Confirmada!' : 'Resposta Registrada!'}
-                        </h3>
-                        <p style="font-size: 1.1rem; margin-bottom: 20px; color: #333;">
-                            ${message}
-                        </p>
-                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">
-                            Você pode fechar esta página.
-                        </p>
-                        <button onclick="window.close()" 
-                                style="
-                                    background: #667eea;
-                                    color: white;
-                                    border: none;
-                                    padding: 10px 20px;
-                                    border-radius: 8px;
-                                    cursor: pointer;
-                                    font-weight: 600;
-                                ">
-                            Fechar Página
-                        </button>
+                    <h1 style="
+                        font-size: 2.5em;
+                        margin-bottom: 20px;
+                        color: ${statusColor};
+                        animation: textSlideIn 0.8s ease-out 0.5s both;
+                    ">
+                        ${statusText}
+                    </h1>
+                    <p style="
+                        font-size: 1.2em;
+                        margin-bottom: 30px;
+                        opacity: 0.9;
+                        animation: textSlideIn 0.8s ease-out 0.7s both;
+                    ">
+                        Obrigado por confirmar sua presença!
+                    </p>
+                    <button onclick="window.close()" style="
+                        background: linear-gradient(135deg, #667eea, #764ba2);
+                        color: white;
+                        border: none;
+                        padding: 15px 40px;
+                        border-radius: 50px;
+                        font-size: 1.1em;
+                        cursor: pointer;
+                        animation: buttonAppear 0.8s ease-out 0.9s both;
+                    ">
+                        Fechar
+                    </button>
                 </div>
-                </div>
-                
-                <style>
-                    @keyframes fadeIn {
-                        from { opacity: 0; transform: translateY(20px); }
-                        to { opacity: 1; transform: translateY(0); }
-                    }
-                    @keyframes bounce {
-                        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-                        40% { transform: translateY(-10px); }
-                        60% { transform: translateY(-5px); }
-                    }
-                </style>
             `;
-            
-            // Notificar o usuário principal (se estiver na mesma sessão)
-            if (window.opener) {
-                window.opener.postMessage({
-                    type: 'confirmation_update',
-                    guestId: guestId,
-                    status: status,
-                    guestName: guest.nome
-                }, '*');
-            }
-            
-            // Para funcionar localmente, também salvar um timestamp de atualização
-            const updateData = {
-                guestId: guestId,
-                status: status,
-                timestamp: Date.now()
-            };
-            localStorage.setItem('lastConfirmationUpdate', JSON.stringify(updateData));
         }
+
+        // Funções utilitárias
+        function formatDate(dateString) {
+            if (!dateString) return 'Data não definida';
+            
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return 'Hora não definida';
+            
+            const date = new Date(dateString);
+            return date.toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getNextSaturday() {
+            const today = new Date();
+            const daysUntilSaturday = (6 - today.getDay() + 7) % 7;
+            const nextSaturday = new Date(today);
+            nextSaturday.setDate(today.getDate() + daysUntilSaturday);
+            nextSaturday.setHours(19, 0, 0, 0); // 19:00
+            
+            return nextSaturday.toISOString().slice(0, 16);
+        }
+
+        function showSendProgress() {
+            document.getElementById('sendProgress').classList.remove('hidden');
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = 'Preparando envio...';
+        }
+
+        // Função para salvar dados
+        function saveData() {
+            try {
+                localStorage.setItem('guests', JSON.stringify(guests));
+                localStorage.setItem('eventData', JSON.stringify(eventData));
+                
+                // Limpar imagens antigas do localStorage (manter apenas as últimas 5)
+                cleanupOldImages();
+            } catch (error) {
+                console.error('❌ Erro ao salvar dados:', error);
+            }
+        }
+
+        // Função para limpar imagens antigas do localStorage
+        function cleanupOldImages() {
+            try {
+                const keys = Object.keys(localStorage);
+                const imageKeys = keys.filter(key => key.startsWith('img_'));
+                
+                if (imageKeys.length > 5) {
+                    // Manter apenas as 5 imagens mais recentes
+                    const sortedKeys = imageKeys.sort((a, b) => {
+                        const aTime = localStorage.getItem(a + '_time') || 0;
+                        const bTime = localStorage.getItem(b + '_time') || 0;
+                        return bTime - aTime;
+                    });
+                    
+                    // Remover imagens antigas
+                    sortedKeys.slice(5).forEach(key => {
+                        localStorage.removeItem(key);
+                        localStorage.removeItem(key + '_time');
+                        console.log('🗑️ Imagem antiga removida:', key);
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Erro ao limpar imagens antigas:', error);
+            }
+        }
+
+        // Função para carregar dados salvos
+        function loadStoredData() {
+            try {
+                const savedGuests = localStorage.getItem('guests');
+                const savedEventData = localStorage.getItem('eventData');
+                
+                if (savedGuests) {
+                    guests = JSON.parse(savedGuests);
+                    console.log('📊 Convidados carregados:', guests.length);
+                }
+                
+                if (savedEventData) {
+                    eventData = JSON.parse(savedEventData);
+                    
+                    // Preencher campos do evento
+                    document.getElementById('eventName').value = eventData.name || '';
+                    document.getElementById('eventDate').value = eventData.date || '';
+                    document.getElementById('eventLocation').value = eventData.location || '';
+                    document.getElementById('eventDescription').value = eventData.description || '';
+                }
+                
+                updateDashboard();
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados:', error);
+            }
+        }
+
+        // Carregar dados quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInviteData();
+        });
+
+// Função para verificar atualizações do localStorage
+function checkForUpdates() {
+    try {
+        // Verificar se há atualizações de confirmação
+        const lastUpdate = localStorage.getItem('lastConfirmationUpdate');
+        if (lastUpdate) {
+            const updateData = JSON.parse(lastUpdate);
+            const guest = guests.find(g => g.id === updateData.guestId);
+            
+            if (guest && guest.status !== updateData.status) {
+                guest.status = updateData.status;
+                saveData();
+                updateDashboard();
+                
+                // Mostrar notificação
+                showNotification(
+                    `${guest.nome} ${updateData.status === 'confirmed' ? 'confirmou' : 'não confirmou'} presença!`, 
+                    'success'
+                );
+                
+                // Limpar timestamp para evitar reprocessamento
+                localStorage.removeItem('lastConfirmationUpdate');
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro ao verificar atualizações:', error);
     }
 }
 
