@@ -475,9 +475,12 @@
                 const eventLocation = urlParams.get('eventLocation');
                 const eventDescription = urlParams.get('eventDescription');
                 const nameFromUrl = urlParams.get('name');
+                
+                // SOLUÇÃO FINAL: Tentar ID primeiro, depois imagem direta
+                const imageIdFromUrl = urlParams.get('imageId');
                 const imageFromUrl = urlParams.get('image');
                 
-                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImage: !!imageFromUrl });
+                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, imageId: imageIdFromUrl, hasImage: !!imageFromUrl });
                 
                 // Criar objeto de dados do evento
                 const eventData = {
@@ -505,14 +508,49 @@
                 document.getElementById('eventLocation').textContent = eventData.location;
                 document.getElementById('eventDescription').textContent = eventData.description;
                 
-                // Mostrar imagem se existir
-                if (imageFromUrl) {
-                    console.log('🖼️ Carregando imagem da URL...');
+                // SOLUÇÃO FINAL: Tentar ID primeiro, depois imagem direta
+                let imageLoaded = false;
+                
+                if (imageIdFromUrl) {
+                    console.log('🖼️ Tentando carregar imagem usando ID:', imageIdFromUrl);
+                    try {
+                        const savedImage = localStorage.getItem('inviteImage_' + imageIdFromUrl);
+                        if (savedImage && savedImage !== 'null' && savedImage !== 'undefined') {
+                            loadImageToContainer(savedImage);
+                            imageLoaded = true;
+                            console.log('✅ Imagem carregada via ID');
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro ao carregar imagem via ID:', error);
+                    }
+                }
+                
+                // Fallback: tentar imagem direta na URL
+                if (!imageLoaded && imageFromUrl) {
+                    console.log('🖼️ Tentando carregar imagem direta da URL');
+                    try {
+                        const decodedImage = decodeURIComponent(imageFromUrl);
+                        loadImageToContainer(decodedImage);
+                        imageLoaded = true;
+                        console.log('✅ Imagem carregada via URL direta');
+                    } catch (error) {
+                        console.error('❌ Erro ao carregar imagem via URL:', error);
+                    }
+                }
+                
+                // Se nenhuma imagem carregou, mostrar placeholder
+                if (!imageLoaded) {
+                    console.log('❌ Nenhuma imagem conseguiu ser carregada');
+                    const imageContainer = document.getElementById('inviteImage');
+                    imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem disponível</p></div>';
+                }
+                
+                // Função para carregar imagem no container
+                function loadImageToContainer(imageSrc) {
                     const imageContainer = document.getElementById('inviteImage');
                     
-                    // Criar elemento de imagem
                     const img = document.createElement('img');
-                    img.src = decodeURIComponent(imageFromUrl);
+                    img.src = imageSrc;
                     img.alt = 'Convite';
                     img.style.cssText = `
                         max-width: 100%;
@@ -522,25 +560,17 @@
                         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
                     `;
                     
-                    // Tratamento de erro
                     img.onerror = function() {
                         console.error('❌ Erro ao carregar imagem');
                         imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Erro ao carregar imagem</p></div>';
                     };
                     
-                    // Tratamento de sucesso
                     img.onload = function() {
                         console.log('✅ Imagem carregada com sucesso!');
                     };
                     
-                    // Limpar container e adicionar imagem
                     imageContainer.innerHTML = '';
                     imageContainer.appendChild(img);
-                    
-                } else {
-                    console.log('❌ Nenhuma imagem na URL');
-                    const imageContainer = document.getElementById('inviteImage');
-                    imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem selecionada</p></div>';
                 }
 
                 // Salvar dados para confirmação

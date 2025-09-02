@@ -314,33 +314,47 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SEMPRE incluir imagem na URL (comprimida se necessário)
+    // SOLUÇÃO FINAL: Se localStorage funcionar, usar ID. Se não, incluir imagem comprimida
     let imageParam = '';
     if (selectedImage) {
-        // Se a imagem for muito grande, comprimir antes de incluir
-        if (selectedImage.length > 100000) {
-            // Comprimir imagem para base64 menor
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
+        try {
+            // Tentar usar localStorage com ID único
+            const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('inviteImage_' + imageId, selectedImage);
             
-            img.onload = function() {
-                const maxWidth = 600;
-                const ratio = maxWidth / img.width;
-                canvas.width = maxWidth;
-                canvas.height = img.height * ratio;
+            // Incluir apenas o ID na URL
+            imageParam = `&imageId=${imageId}`;
+            console.log('💾 Imagem salva com ID:', imageId);
+            
+        } catch (error) {
+            console.log('⚠️ localStorage falhou, usando imagem comprimida na URL');
+            
+            // Fallback: comprimir imagem e incluir na URL
+            if (selectedImage.startsWith('data:image/')) {
+                // Comprimir imagem para reduzir tamanho
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
                 
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const compressedImage = canvas.toDataURL('image/jpeg', 0.7);
+                img.onload = function() {
+                    const maxWidth = 400; // Reduzir ainda mais
+                    const ratio = maxWidth / img.width;
+                    canvas.width = maxWidth;
+                    canvas.height = img.height * ratio;
+                    
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const compressedImage = canvas.toDataURL('image/jpeg', 0.6); // Qualidade menor
+                    
+                    // Atualizar selectedImage com versão comprimida
+                    selectedImage = compressedImage;
+                    console.log('🖼️ Imagem comprimida para:', compressedImage.length);
+                };
+                img.src = selectedImage;
                 
-                // Atualizar selectedImage com versão comprimida
-                selectedImage = compressedImage;
-                console.log('🖼️ Imagem comprimida para:', compressedImage.length);
-            };
-            img.src = selectedImage;
+                // Incluir imagem comprimida na URL
+                imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+            }
         }
-        
-        imageParam = `&image=${encodeURIComponent(selectedImage)}`;
     }
     
     if (guestId) {
