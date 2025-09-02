@@ -278,7 +278,7 @@ function compressImage(imageDataUrl, maxWidth = 800, quality = 0.8) {
 }
 
 // Função para gerar link de confirmação com fallback para mobile
-function generateConfirmationLink(guestId = null) {
+async function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
     
     // Detectar se está rodando localmente ou em servidor
@@ -314,31 +314,28 @@ function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SOLUÇÃO SIMPLES: Sempre incluir imagem comprimida na URL
+    // SOLUÇÃO REAL: Sempre incluir imagem na URL com tratamento robusto
     let imageParam = '';
     if (selectedImage) {
-        // Comprimir imagem para reduzir tamanho da URL
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        
-        img.onload = function() {
-            const maxWidth = 300; // Reduzir bastante para URL menor
-            const ratio = maxWidth / img.width;
-            canvas.width = maxWidth;
-            canvas.height = img.height * ratio;
-            
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const compressedImage = canvas.toDataURL('image/jpeg', 0.5); // Qualidade baixa para URL menor
-            
-            // Atualizar selectedImage com versão comprimida
-            selectedImage = compressedImage;
-            console.log('🖼️ Imagem comprimida para:', compressedImage.length);
-        };
-        img.src = selectedImage;
-        
-        // Incluir imagem comprimida na URL
-        imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+        try {
+            // Verificar se a imagem é válida
+            if (selectedImage.startsWith('data:image/')) {
+                // Imagem base64 válida
+                imageParam = `&image=${encodeURIComponent(selectedImage)}`;
+                console.log('🖼️ Imagem base64 incluída na URL');
+            } else if (selectedImage.startsWith('http')) {
+                // Imagem de URL externa
+                imageParam = `&imageUrl=${encodeURIComponent(selectedImage)}`;
+                console.log('🖼️ URL externa incluída na URL');
+            } else {
+                // Imagem pré-definida
+                imageParam = `&imagePath=${encodeURIComponent(selectedImage)}`;
+                console.log('🖼️ Caminho de imagem incluído na URL');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao processar imagem:', error);
+            // Não incluir imagem se der erro
+        }
     }
     
     if (guestId) {
