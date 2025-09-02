@@ -314,27 +314,23 @@ async function generateConfirmationLink(guestId = null) {
         }
     }
     
-    // SOLUÇÃO REAL: Sempre incluir imagem na URL com tratamento robusto
+    // SOLUÇÃO REAL: Usar localStorage com ID único
     let imageParam = '';
     if (selectedImage) {
         try {
-            // Verificar se a imagem é válida
-            if (selectedImage.startsWith('data:image/')) {
-                // Imagem base64 válida
-                imageParam = `&image=${encodeURIComponent(selectedImage)}`;
-                console.log('🖼️ Imagem base64 incluída na URL');
-            } else if (selectedImage.startsWith('http')) {
-                // Imagem de URL externa
-                imageParam = `&imageUrl=${encodeURIComponent(selectedImage)}`;
-                console.log('🖼️ URL externa incluída na URL');
-            } else {
-                // Imagem pré-definida
-                imageParam = `&imagePath=${encodeURIComponent(selectedImage)}`;
-                console.log('🖼️ Caminho de imagem incluído na URL');
-            }
+            // Gerar ID único para a imagem
+            const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // Salvar imagem no localStorage com ID único
+            localStorage.setItem(imageId, selectedImage);
+            console.log('💾 Imagem salva com ID:', imageId);
+            
+            // Incluir apenas o ID na URL
+            imageParam = `&imageKey=${imageId}`;
+            
         } catch (error) {
-            console.error('❌ Erro ao processar imagem:', error);
-            // Não incluir imagem se der erro
+            console.error('❌ Erro ao salvar imagem:', error);
+            // Se der erro, não incluir imagem
         }
     }
     

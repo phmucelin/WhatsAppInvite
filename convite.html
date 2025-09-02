@@ -214,6 +214,50 @@
             opacity: 0.8;
         }
         
+        .loading {
+            text-align: center;
+            padding: 60px 30px;
+            color: #87ceeb;
+        }
+        
+        .loading i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading p {
+            font-size: 1.2em;
+            margin: 0;
+            opacity: 0.8;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px 30px;
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border-radius: 15px;
+            margin: 20px;
+        }
+        
+        .error i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #fecaca;
+        }
+        
+        .error p {
+            font-size: 1.1em;
+            margin: 0;
+            opacity: 0.9;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -428,34 +472,6 @@
                     imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem disponível</p></div>';
                 }
 
-                // Função para carregar imagem no container
-                function loadImageToContainer(imageSrc) {
-                    const imageContainer = document.getElementById('inviteImage');
-                    
-                    const img = document.createElement('img');
-                    img.src = imageSrc;
-                    img.alt = 'Convite';
-                    img.style.cssText = `
-                        max-width: 100%;
-                        height: auto;
-                        border-radius: 10px;
-                        display: block;
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                    `;
-                    
-                    img.onerror = function() {
-                        console.error('❌ Erro ao carregar imagem:', imageSrc);
-                        imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Erro ao carregar imagem</p></div>';
-                    };
-                    
-                    img.onload = function() {
-                        console.log('✅ Imagem carregada com sucesso!');
-                    };
-                    
-                    imageContainer.innerHTML = '';
-                    imageContainer.appendChild(img);
-                }
-
                 // Salvar dados para confirmação
                 window.inviteData = {
                     eventId: eventId,
@@ -473,6 +489,34 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('errorMessage').style.display = 'block';
             }
+        }
+
+        // Função para carregar imagem no container (MOVIDA PARA FORA)
+        function loadImageToContainer(imageSrc) {
+            const imageContainer = document.getElementById('inviteImage');
+            
+            const img = document.createElement('img');
+            img.src = imageSrc;
+            img.alt = 'Convite';
+            img.style.cssText = `
+                max-width: 100%;
+                height: auto;
+                border-radius: 10px;
+                display: block;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            `;
+            
+            img.onerror = function() {
+                console.error('❌ Erro ao carregar imagem:', imageSrc);
+                imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Erro ao carregar imagem</p></div>';
+            };
+            
+            img.onload = function() {
+                console.log('✅ Imagem carregada com sucesso!');
+            };
+            
+            imageContainer.innerHTML = '';
+            imageContainer.appendChild(img);
         }
 
         // Função para confirmar presença
