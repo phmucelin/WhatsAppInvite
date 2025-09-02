@@ -926,6 +926,59 @@ function updateDashboard() {
     updateGuestsList();
 }
 
+// Função para limpar completamente o localStorage
+function clearAllData() {
+    try {
+        console.log('🧹 Limpando todos os dados...');
+        
+        // Limpar todas as chaves relacionadas ao sistema
+        const keysToRemove = [
+            'guests', 'eventData', 'whatsappInvitesData', 'lastConfirmationUpdate',
+            'selectedImage', 'lastConfirmationUpdate'
+        ];
+        
+        // Remover chaves específicas
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        // Remover chaves de confirmação
+        const allKeys = Object.keys(localStorage);
+        const confirmationKeys = allKeys.filter(key => key.startsWith('confirmation_'));
+        confirmationKeys.forEach(key => localStorage.removeItem(key));
+        
+        // Remover chaves de imagem
+        const imageKeys = allKeys.filter(key => key.startsWith('img_'));
+        imageKeys.forEach(key => localStorage.removeItem(key));
+        
+        // Limpar variáveis globais
+        guests = [];
+        eventData = {};
+        selectedImage = null;
+        
+        console.log('✅ Todos os dados foram limpos');
+        
+        // Atualizar dashboard
+        updateDashboard();
+        
+        // Limpar campos do formulário
+        const eventNameEl = document.getElementById('eventName');
+        const eventDateEl = document.getElementById('eventDate');
+        const eventLocationEl = document.getElementById('eventLocation');
+        const eventDescriptionEl = document.getElementById('eventDescription');
+        
+        if (eventNameEl) eventNameEl.value = '';
+        if (eventDateEl) eventNameEl.value = '';
+        if (eventLocationEl) eventLocationEl.value = '';
+        if (eventDescriptionEl) eventDescriptionEl.value = '';
+        
+        // Mostrar notificação
+        showNotification('Todos os dados foram limpos!', 'success');
+        
+    } catch (error) {
+        console.error('❌ Erro ao limpar dados:', error);
+        showNotification('Erro ao limpar dados', 'error');
+    }
+}
+
 // Função para forçar atualização do dashboard (útil para testes locais)
 function forceUpdateDashboard() {
     // Recarregar dados do localStorage
@@ -1199,45 +1252,43 @@ function handleConfirmation(guestId, status) {
                 
                 console.log('✅ Confirmando presença:', { guestId, status });
                 
-                // Carregar lista de convidados do localStorage
-                const savedGuests = localStorage.getItem('guests');
-                if (savedGuests) {
-                    const guests = JSON.parse(savedGuests);
-                    const guestIndex = guests.findIndex(g => g.id === guestId);
-                    
-                    if (guestIndex !== -1) {
-                        // Atualizar status do convidado
-                        guests[guestIndex].status = status;
-                        localStorage.setItem('guests', JSON.stringify(guests));
-                        
-                        // Salvar timestamp da última atualização
-                        const updateData = {
-                            guestId: guestId,
-                            status: status,
-                            timestamp: Date.now()
-                        };
-                        localStorage.setItem('lastConfirmationUpdate', JSON.stringify(updateData));
-                        
-                        console.log('✅ Status atualizado:', guests[guestIndex].nome, '->', status);
-                    } else {
-                        console.log('⚠️ Convidado não encontrado na lista:', guestId);
-                    }
-                } else {
-                    console.log('⚠️ Lista de convidados não encontrada no localStorage');
-                }
+                // SOLUÇÃO PARA VERCEL: Usar uma chave única para cada confirmação
+                const confirmationKey = `confirmation_${guestId}_${Date.now()}`;
+                const confirmationData = {
+                    guestId: guestId,
+                    status: status,
+                    timestamp: Date.now(),
+                    confirmed: true
+                };
+                
+                // Salvar confirmação no localStorage
+                localStorage.setItem(confirmationKey, JSON.stringify(confirmationData));
+                
+                // Salvar também na chave principal para compatibilidade
+                localStorage.setItem('lastConfirmationUpdate', JSON.stringify(confirmationData));
+                
+                console.log('💾 Confirmação salva:', confirmationData);
                 
                 // Tentar notificar a aplicação principal
                 if (window.opener) {
                     window.opener.postMessage({
                         type: 'confirmation_update',
                         guestId: guestId,
-                        status: status
+                        status: status,
+                        timestamp: Date.now()
                     }, '*');
                     console.log('📤 Mensagem enviada para aplicação principal');
                 }
                 
                 // Mostrar mensagem de confirmação
                 showConfirmationMessage(status);
+                
+                // Fechar a janela após 3 segundos
+                setTimeout(() => {
+                    if (window.opener) {
+                        window.close();
+                    }
+                }, 3000);
                 
             } catch (error) {
                 console.error('Erro ao confirmar presença:', error);
@@ -1381,27 +1432,83 @@ function handleConfirmation(guestId, status) {
         // Função para carregar dados salvos
         function loadStoredData() {
             try {
+                // LIMPAR DADOS ANTIGOS/FANTASMAS
+                console.log('🧹 Limpando dados antigos...');
+                
+                // Verificar se há dados válidos
                 const savedGuests = localStorage.getItem('guests');
                 const savedEventData = localStorage.getItem('eventData');
                 
-                if (savedGuests) {
-                    guests = JSON.parse(savedGuests);
-                    console.log('📊 Convidados carregados:', guests.length);
+                // Se não há dados válidos, limpar tudo
+                if (!savedGuests || !savedEventData) {
+                    console.log('🗑️ Dados inválidos encontrados, limpando...');
+                    localStorage.removeItem('guests');
+                    localStorage.removeItem('eventData');
+                    localStorage.removeItem('whatsappInvitesData');
+                    localStorage.removeItem('lastConfirmationUpdate');
+                    
+                    // Limpar variáveis globais
+                    guests = [];
+                    eventData = {};
+                    
+                    console.log('✅ Dados limpos, iniciando com lista vazia');
+                    updateDashboard();
+                    return;
                 }
                 
-                if (savedEventData) {
+                // Carregar dados válidos
+                try {
+                    guests = JSON.parse(savedGuests);
                     eventData = JSON.parse(savedEventData);
                     
-                    // Preencher campos do evento
-                    document.getElementById('eventName').value = eventData.name || '';
-                    document.getElementById('eventDate').value = eventData.date || '';
-                    document.getElementById('eventLocation').value = eventData.location || '';
-                    document.getElementById('eventDescription').value = eventData.description || '';
+                    // Validar se os dados são válidos
+                    if (!Array.isArray(guests) || guests.length === 0) {
+                        console.log('⚠️ Lista de convidados inválida, limpando...');
+                        guests = [];
+                        localStorage.removeItem('guests');
+                    }
+                    
+                    if (!eventData || typeof eventData !== 'object') {
+                        console.log('⚠️ Dados do evento inválidos, limpando...');
+                        eventData = {};
+                        localStorage.removeItem('eventData');
+                    }
+                    
+                    console.log('📊 Dados válidos carregados:', { 
+                        guestsCount: guests.length, 
+                        hasEventData: !!eventData.name 
+                    });
+                    
+                    // Preencher campos do evento se existirem
+                    if (eventData.name) {
+                        const eventNameEl = document.getElementById('eventName');
+                        const eventDateEl = document.getElementById('eventDate');
+                        const eventLocationEl = document.getElementById('eventLocation');
+                        const eventDescriptionEl = document.getElementById('eventDescription');
+                        
+                        if (eventNameEl) eventNameEl.value = eventData.name || '';
+                        if (eventDateEl) eventDateEl.value = eventData.date || '';
+                        if (eventLocationEl) eventLocationEl.value = eventData.location || '';
+                        if (eventDescriptionEl) eventDescriptionEl.value = eventData.description || '';
+                    }
+                    
+                } catch (parseError) {
+                    console.error('❌ Erro ao fazer parse dos dados:', parseError);
+                    // Limpar dados corrompidos
+                    localStorage.removeItem('guests');
+                    localStorage.removeItem('eventData');
+                    guests = [];
+                    eventData = {};
                 }
                 
                 updateDashboard();
+                
             } catch (error) {
                 console.error('❌ Erro ao carregar dados:', error);
+                // Em caso de erro, limpar tudo
+                guests = [];
+                eventData = {};
+                updateDashboard();
             }
         }
 
@@ -1413,27 +1520,105 @@ function handleConfirmation(guestId, status) {
 // Função para verificar atualizações do localStorage
 function checkForUpdates() {
     try {
+        console.log('🔍 Verificando atualizações...');
+        
         // Verificar se há atualizações de confirmação
         const lastUpdate = localStorage.getItem('lastConfirmationUpdate');
         if (lastUpdate) {
-            const updateData = JSON.parse(lastUpdate);
-            const guest = guests.find(g => g.id === updateData.guestId);
-            
-            if (guest && guest.status !== updateData.status) {
-                guest.status = updateData.status;
-                saveData();
-                updateDashboard();
+            try {
+                const updateData = JSON.parse(lastUpdate);
+                console.log('📊 Dados de confirmação encontrados:', updateData);
                 
-                // Mostrar notificação
-                showNotification(
-                    `${guest.nome} ${updateData.status === 'confirmed' ? 'confirmou' : 'não confirmou'} presença!`, 
-                    'success'
-                );
+                // Verificar se a confirmação é recente (últimos 30 segundos)
+                const isRecent = (Date.now() - updateData.timestamp) < 30000;
                 
-                // Limpar timestamp para evitar reprocessamento
+                if (isRecent && updateData.confirmed) {
+                    console.log('✅ Confirmação recente encontrada, atualizando dashboard...');
+                    
+                    // Atualizar o convidado na lista local
+                    const guest = guests.find(g => g.id === updateData.guestId);
+                    if (guest) {
+                        const oldStatus = guest.status;
+                        guest.status = updateData.status;
+                        
+                        console.log(`🔄 Status atualizado: ${guest.nome} ${oldStatus} → ${updateData.status}`);
+                        
+                        // Salvar dados atualizados
+                        saveData();
+                        
+                        // Atualizar dashboard
+                        updateDashboard();
+                        
+                        // Mostrar notificação
+                        showNotification(
+                            `${guest.nome} ${updateData.status === 'confirmed' ? 'confirmou' : 'não confirmou'} presença!`, 
+                            'success'
+                        );
+                        
+                        // Limpar confirmação processada
+                        localStorage.removeItem('lastConfirmationUpdate');
+                        console.log('✅ Confirmação processada e removida');
+                    } else {
+                        console.log('⚠️ Convidado não encontrado na lista local:', updateData.guestId);
+                    }
+                } else if (!isRecent) {
+                    console.log('⏰ Confirmação muito antiga, removendo...');
+                    localStorage.removeItem('lastConfirmationUpdate');
+                }
+                
+            } catch (parseError) {
+                console.error('❌ Erro ao processar dados de confirmação:', parseError);
                 localStorage.removeItem('lastConfirmationUpdate');
             }
         }
+        
+        // Verificar se há outras confirmações salvas
+        const keys = Object.keys(localStorage);
+        const confirmationKeys = keys.filter(key => key.startsWith('confirmation_'));
+        
+        if (confirmationKeys.length > 0) {
+            console.log(`🔍 Encontradas ${confirmationKeys.length} confirmações pendentes`);
+            
+            confirmationKeys.forEach(key => {
+                try {
+                    const confirmationData = JSON.parse(localStorage.getItem(key));
+                    const isRecent = (Date.now() - confirmationData.timestamp) < 30000;
+                    
+                    if (isRecent && confirmationData.confirmed) {
+                        // Processar confirmação
+                        const guest = guests.find(g => g.id === confirmationData.guestId);
+                        if (guest) {
+                            guest.status = confirmationData.status;
+                            console.log(`🔄 Processando confirmação: ${guest.nome} → ${confirmationData.status}`);
+                        }
+                        
+                        // Remover confirmação processada
+                        localStorage.removeItem(key);
+                    } else if (!isRecent) {
+                        // Remover confirmações antigas
+                        localStorage.removeItem(key);
+                        console.log(`🗑️ Confirmação antiga removida: ${key}`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Erro ao processar confirmação ${key}:`, error);
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            // Salvar e atualizar se houve mudanças
+            if (confirmationKeys.some(key => {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    return data && data.confirmed && (Date.now() - data.timestamp) < 30000;
+                } catch {
+                    return false;
+                }
+            })) {
+                saveData();
+                updateDashboard();
+            }
+        }
+        
     } catch (error) {
         console.error('❌ Erro ao verificar atualizações:', error);
     }
