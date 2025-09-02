@@ -272,53 +272,59 @@ function generateConfirmationLink(guestId = null) {
     // Adicionar timestamp para evitar cache em dispositivos móveis
     const timestamp = Date.now();
     
-    // SOLUÇÃO OTIMIZADA: Usar apenas dados essenciais e comprimir
+    // SOLUÇÃO ULTRA-OTIMIZADA: Usar apenas dados essenciais e comprimir ao máximo
     let eventParams = '';
     
-    // Comprimir nome do evento (máximo 30 caracteres)
-    const eventName = (eventData.name || 'Evento').substring(0, 30);
+    // Comprimir nome do evento (máximo 20 caracteres)
+    const eventName = (eventData.name || 'Evento').substring(0, 20);
     eventParams += `&n=${encodeURIComponent(eventName)}`;
     
-    // Comprimir data (usar formato mais curto)
+    // Comprimir data (usar formato ultra-curto DD/MM)
     if (eventData.date) {
         const date = new Date(eventData.date);
-        const shortDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+        const shortDate = `${date.getDate()}/${date.getMonth() + 1}`;
         eventParams += `&d=${encodeURIComponent(shortDate)}`;
     }
     
-    // Comprimir local (máximo 25 caracteres)
-    const eventLocation = (eventData.location || 'Local').substring(0, 25);
+    // Comprimir local (máximo 15 caracteres)
+    const eventLocation = (eventData.location || 'Local').substring(0, 15);
     eventParams += `&l=${encodeURIComponent(eventLocation)}`;
     
-    // Comprimir descrição (máximo 50 caracteres)
-    const eventDescription = (eventData.description || 'Descrição').substring(0, 50);
+    // Comprimir descrição (máximo 25 caracteres)
+    const eventDescription = (eventData.description || 'Descrição').substring(0, 25);
     eventParams += `&desc=${encodeURIComponent(eventDescription)}`;
     
-    // Adicionar nome do convidado se disponível (máximo 20 caracteres)
+    // Adicionar nome do convidado se disponível (máximo 15 caracteres)
     let nameParam = '';
     if (guestId) {
         const guest = guests.find(g => g.id === guestId);
         if (guest && guest.nome) {
-            const shortName = guest.nome.substring(0, 20);
+            const shortName = guest.nome.substring(0, 15);
             nameParam = `&nm=${encodeURIComponent(shortName)}`;
         }
     }
     
-    // SOLUÇÃO OTIMIZADA: Comprimir imagem mais agressivamente
+    // SOLUÇÃO ULTRA-OTIMIZADA: Não incluir imagem na URL - usar localStorage
     let imageParam = '';
     if (selectedImage) {
         try {
-            // Comprimir imagem de forma mais agressiva (menor qualidade e tamanho)
-            const compressedImage = compressImageSync(selectedImage, 200); // Reduzir para 200px
-            imageParam = `&img=${encodeURIComponent(compressedImage)}`;
-            console.log('🖼️ Imagem altamente comprimida incluída na URL');
+            // Gerar um hash único para a imagem
+            const imageHash = generateImageHash(selectedImage);
+            
+            // Salvar imagem no localStorage com o hash e timestamp
+            localStorage.setItem(`img_${imageHash}`, selectedImage);
+            localStorage.setItem(`img_${imageHash}_time`, Date.now().toString());
+            
+            // Usar apenas o hash na URL (muito menor)
+            imageParam = `&ih=${imageHash}`;
+            console.log('🖼️ Imagem salva no localStorage, hash na URL:', imageHash);
         } catch (error) {
-            console.error('❌ Erro ao comprimir imagem:', error);
+            console.error('❌ Erro ao processar imagem:', error);
         }
     }
     
     if (guestId) {
-        // Usar a nova página de convite personalizada com parâmetros otimizados
+        // Usar a nova página de convite personalizada com parâmetros ultra-otimizados
         const finalUrl = `${baseUrl}?e=${encodedEvent}&g=${encodedGuest}${nameParam}${eventParams}${imageParam}&t=${timestamp}`;
         return finalUrl;
     }
@@ -327,6 +333,22 @@ function generateConfirmationLink(guestId = null) {
 
 function generateEventId() {
     return 'event_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Função para gerar hash único da imagem
+function generateImageHash(imageDataUrl) {
+    // Gerar um hash simples baseado no conteúdo da imagem
+    let hash = 0;
+    const str = imageDataUrl.substring(0, 100); // Usar apenas os primeiros 100 caracteres
+    
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Converter para 32-bit integer
+    }
+    
+    // Retornar hash em base36 para ser mais curto
+    return Math.abs(hash).toString(36).substring(0, 8);
 }
 
 function generateGuestId() {
@@ -412,6 +434,9 @@ function prepareMessages() {
         
         console.log('✅ Dados validados, preparando mensagens...');
         
+        // Mostrar estatísticas de otimização da URL
+        showURLOptimizationStats();
+        
         // Gerar mensagens para cada convidado com link único
         const messages = guests.map(guest => {
             const confirmationLink = generateConfirmationLink(guest.id);
@@ -442,6 +467,46 @@ function prepareMessages() {
         console.error('❌ Erro ao preparar mensagens:', error);
         alert('Erro ao preparar mensagens. Tente novamente.');
     }
+}
+
+// Função para mostrar estatísticas de otimização da URL
+function showURLOptimizationStats() {
+    if (selectedImage) {
+        const oldURL = generateOldStyleURL();
+        const newURL = generateConfirmationLink('test');
+        
+        const oldLength = oldURL.length;
+        const newLength = newURL.length;
+        const reduction = Math.round(((oldLength - newLength) / oldLength) * 100);
+        
+        console.log('📊 Estatísticas de otimização da URL:');
+        console.log(`📏 URL antiga: ${oldLength} caracteres`);
+        console.log(`📏 URL nova: ${newLength} caracteres`);
+        console.log(`📉 Redução: ${reduction}%`);
+        
+        // Mostrar notificação
+        showNotification(`URL otimizada! Redução de ${reduction}% no tamanho`, 'success');
+    }
+}
+
+// Função para gerar URL no estilo antigo (para comparação)
+function generateOldStyleURL() {
+    const baseUrl = window.location.protocol === 'file:' ? './convite.html' : `${window.location.origin}/convite.html`;
+    const eventId = generateEventId();
+    const guestId = 'test';
+    
+    let url = `${baseUrl}?event=${eventId}&guest=${guestId}`;
+    url += `&eventName=${encodeURIComponent(eventData.name || 'Evento')}`;
+    url += `&eventDate=${encodeURIComponent(eventData.date || new Date().toISOString())}`;
+    url += `&eventLocation=${encodeURIComponent(eventData.location || 'Local do evento')}`;
+    url += `&eventDescription=${encodeURIComponent(eventData.description || 'Descrição do evento')}`;
+    url += `&name=${encodeURIComponent('Teste')}`;
+    
+    if (selectedImage) {
+        url += `&image=${encodeURIComponent(selectedImage)}`;
+    }
+    
+    return url;
 }
 
 function createMessageInterface(messages) {
@@ -1196,8 +1261,37 @@ function saveData() {
     try {
         localStorage.setItem('guests', JSON.stringify(guests));
         localStorage.setItem('eventData', JSON.stringify(eventData));
+        
+        // Limpar imagens antigas do localStorage (manter apenas as últimas 5)
+        cleanupOldImages();
     } catch (error) {
         console.error('❌ Erro ao salvar dados:', error);
+    }
+}
+
+// Função para limpar imagens antigas do localStorage
+function cleanupOldImages() {
+    try {
+        const keys = Object.keys(localStorage);
+        const imageKeys = keys.filter(key => key.startsWith('img_'));
+        
+        if (imageKeys.length > 5) {
+            // Manter apenas as 5 imagens mais recentes
+            const sortedKeys = imageKeys.sort((a, b) => {
+                const aTime = localStorage.getItem(a + '_time') || 0;
+                const bTime = localStorage.getItem(b + '_time') || 0;
+                return bTime - aTime;
+            });
+            
+            // Remover imagens antigas
+            sortedKeys.slice(5).forEach(key => {
+                localStorage.removeItem(key);
+                localStorage.removeItem(key + '_time');
+                console.log('🗑️ Imagem antiga removida:', key);
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erro ao limpar imagens antigas:', error);
     }
 }
 
