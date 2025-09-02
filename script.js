@@ -278,7 +278,7 @@ function compressImage(imageDataUrl, maxWidth = 800, quality = 0.8) {
 }
 
 // Função para gerar link de confirmação com fallback para mobile
-async function generateConfirmationLink(guestId = null) {
+function generateConfirmationLink(guestId = null) {
     const eventId = generateEventId();
     
     // Detectar se está rodando localmente ou em servidor
