@@ -128,7 +128,6 @@
             background: linear-gradient(135deg, #0f2027, #203a43);
             margin: 20px 0;
             padding: 20px;
-            border-radius: 15px;
             border-left: 4px solid #87ceeb;
             box-shadow: 0 8px 25px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
@@ -289,33 +288,27 @@
 </head>
 <body>
     <div class="invite-container">
-        <!-- Loading inicial -->
         <div id="loading" class="loading">
             <i class="fas fa-spinner"></i>
             <p>Carregando convite...</p>
         </div>
 
-        <!-- Conteúdo do convite (inicialmente oculto) -->
         <div id="inviteContent" style="display: none;">
-            <!-- Nome do convidado -->
             <div class="guest-name" id="guestName">
                 Olá, Convidado!
             </div>
 
-            <!-- Header do convite -->
             <div class="invite-header">
                 <h1 id="eventName">Nome do Evento</h1>
                 <div class="event-date" id="eventDate">Data do evento</div>
             </div>
 
-            <!-- Imagem do convite -->
             <div class="invite-image" id="inviteImage">
                 <div class="placeholder">
                     <i class="fas fa-image"></i>
                 </div>
             </div>
 
-            <!-- Informações do evento -->
             <div class="invite-content">
                 <div class="info-item">
                     <i class="fas fa-calendar-alt"></i>
@@ -341,7 +334,6 @@
                     </div>
                 </div>
 
-                <!-- Botões de confirmação -->
                 <div class="confirmation-buttons">
                     <button class="btn btn-confirm" onclick="confirmPresence('confirmed')">
                         <i class="fas fa-check"></i> Confirmar Presença
@@ -353,7 +345,6 @@
             </div>
         </div>
 
-        <!-- Mensagem de erro -->
         <div id="errorMessage" class="error" style="display: none;">
             <i class="fas fa-exclamation-triangle"></i>
             <p>Erro ao carregar o convite. Verifique se o link está correto.</p>
@@ -365,15 +356,15 @@
         async function loadInviteData() {
             try {
                 console.log('🔍 Iniciando carregamento do convite...');
-                
+
                 // Pegar parâmetros da URL
                 const urlParams = new URLSearchParams(window.location.search);
                 const eventId = urlParams.get('event');
                 const guestId = urlParams.get('guest');
                 const timestamp = urlParams.get('t');
-                
+
                 console.log('📱 Parâmetros da URL:', { eventId, guestId, timestamp });
-                
+
                 if (!eventId || !guestId) {
                     throw new Error(`Parâmetros inválidos: event=${eventId}, guest=${guestId}`);
                 }
@@ -384,14 +375,13 @@
                 const eventLocation = urlParams.get('eventLocation');
                 const eventDescription = urlParams.get('eventDescription');
                 const nameFromUrl = urlParams.get('name');
-                
-                // SOLUÇÃO REAL: Carregar qualquer tipo de imagem
-                const imageFromUrl = urlParams.get('image');
-                const imageUrlFromUrl = urlParams.get('imageUrl');
-                const imagePathFromUrl = urlParams.get('imagePath');
-                
-                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImage: !!imageFromUrl, hasImageUrl: !!imageUrlFromUrl, hasImagePath: !!imagePathFromUrl });
-                
+
+                // SOLUÇÃO: Carregar a imagem do localStorage usando a chave da URL
+                const imageKeyFromUrl = urlParams.get('imageKey');
+                const imageBase64 = imageKeyFromUrl ? localStorage.getItem(imageKeyFromUrl) : null;
+
+                console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImageKey: !!imageKeyFromUrl, hasImageBase64: !!imageBase64 });
+
                 // Criar objeto de dados do evento
                 const eventData = {
                     name: eventName || 'Nome do Evento',
@@ -399,7 +389,7 @@
                     location: eventLocation || 'Local do evento',
                     description: eventDescription || 'Descrição do evento'
                 };
-                
+
                 // Criar objeto do convidado
                 const guest = {
                     id: guestId,
@@ -407,9 +397,9 @@
                     numero: '+5511999999999',
                     status: 'pending'
                 };
-                
+
                 console.log('📊 Dados finais:', { eventData, guest });
-                
+
                 // Preencher dados na página
                 document.getElementById('guestName').textContent = `Olá, ${guest.nome}!`;
                 document.getElementById('eventName').textContent = eventData.name;
@@ -417,43 +407,17 @@
                 document.getElementById('eventDateTime').textContent = formatDateTime(eventData.date);
                 document.getElementById('eventLocation').textContent = eventData.location;
                 document.getElementById('eventDescription').textContent = eventData.description;
-                
-                // SOLUÇÃO REAL: Tentar carregar imagem de qualquer fonte
+
+                // Tentar carregar a imagem do localStorage
                 let imageLoaded = false;
-                
-                // Tentar imagem base64 primeiro
-                if (imageFromUrl && !imageLoaded) {
-                    console.log('🖼️ Tentando carregar imagem base64...');
+                if (imageBase64) {
+                    console.log('🖼️ Tentando carregar imagem do localStorage...');
                     try {
-                        loadImageToContainer(decodeURIComponent(imageFromUrl));
+                        loadImageToContainer(imageBase64);
                         imageLoaded = true;
-                        console.log('✅ Imagem base64 carregada com sucesso!');
+                        console.log('✅ Imagem do localStorage carregada com sucesso!');
                     } catch (error) {
-                        console.error('❌ Erro ao carregar imagem base64:', error);
-                    }
-                }
-                
-                // Tentar URL externa
-                if (imageUrlFromUrl && !imageLoaded) {
-                    console.log('🖼️ Tentando carregar URL externa...');
-                    try {
-                        loadImageToContainer(decodeURIComponent(imageUrlFromUrl));
-                        imageLoaded = true;
-                        console.log('✅ URL externa carregada com sucesso!');
-                    } catch (error) {
-                        console.error('❌ Erro ao carregar URL externa:', error);
-                    }
-                }
-                
-                // Tentar caminho de imagem
-                if (imagePathFromUrl && !imageLoaded) {
-                    console.log('🖼️ Tentando carregar caminho de imagem...');
-                    try {
-                        loadImageToContainer(decodeURIComponent(imagePathFromUrl));
-                        imageLoaded = true;
-                        console.log('✅ Caminho de imagem carregado com sucesso!');
-                    } catch (error) {
-                        console.error('❌ Erro ao carregar caminho de imagem:', error);
+                        console.error('❌ Erro ao carregar imagem do localStorage:', error);
                     }
                 }
                 
@@ -463,7 +427,7 @@
                     const imageContainer = document.getElementById('inviteImage');
                     imageContainer.innerHTML = '<div class="placeholder"><i class="fas fa-image"></i><p>Nenhuma imagem disponível</p></div>';
                 }
-                
+
                 // Função para carregar imagem no container
                 function loadImageToContainer(imageSrc) {
                     const imageContainer = document.getElementById('inviteImage');
@@ -514,33 +478,22 @@
         // Função para confirmar presença
         function confirmPresence(status) {
             try {
-                // Atualizar status do convidado
-                const guestId = new URLSearchParams(window.location.search).get('guest');
-                if (guestId) {
-                    // Carregar lista de convidados do localStorage
-                    const savedGuests = localStorage.getItem('guests');
-                    if (savedGuests) {
-                        const guests = JSON.parse(savedGuests);
-                        const guestIndex = guests.findIndex(g => g.id === guestId);
-                        
-                        if (guestIndex !== -1) {
-                            guests[guestIndex].status = status;
-                            localStorage.setItem('guests', JSON.stringify(guests));
-                            
-                            // Salvar timestamp da última atualização
-                            localStorage.setItem('lastConfirmationUpdate', Date.now().toString());
-                            
-                            // Tentar notificar a aplicação principal
-                            if (window.opener) {
-                                window.opener.postMessage({
-                                    type: 'confirmationUpdate',
-                                    guestId: guestId,
-                                    status: status
-                                }, '*');
-                            }
-                        }
-                    }
+                // Tentar notificar a aplicação principal
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'confirmation_update',
+                        guestId: new URLSearchParams(window.location.search).get('guest'),
+                        status: status
+                    }, '*');
                 }
+                
+                // Salvar status no localStorage para persistência
+                const updateData = {
+                    guestId: new URLSearchParams(window.location.search).get('guest'),
+                    status: status,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('lastConfirmationUpdate', JSON.stringify(updateData));
                 
                 // Mostrar mensagem de confirmação
                 showConfirmationMessage(status);
@@ -732,8 +685,6 @@
             }
         }
 
-
-
         // Carregar dados quando a página carregar
         document.addEventListener('DOMContentLoaded', () => {
             loadInviteData();
@@ -747,4 +698,4 @@
         });
     </script>
 </body>
-</html> 
+</html>
