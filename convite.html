@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎉 Convite Personalizado</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -15,7 +16,7 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             color: white;
@@ -55,30 +56,15 @@
             overflow: hidden;
         }
         
-        .invite-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-            animation: shimmer 3s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-        
         .invite-header h1 {
             margin: 0;
             font-size: 2.5em;
-            font-weight: 300;
+            font-weight: 600;
             background: linear-gradient(45deg, #fff, #87ceeb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            letter-spacing: -0.02em;
         }
         
         .guest-name {
@@ -89,15 +75,15 @@
             margin: 0;
             border: none;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            animation: slideIn 0.8s ease-out;
         }
         
         .guest-name h2 {
             margin: 0;
             font-size: 2em;
-            font-weight: 400;
+            font-weight: 500;
             color: #87ceeb;
             text-shadow: 0 2px 10px rgba(135, 206, 235, 0.3);
+            letter-spacing: -0.01em;
         }
         
         .invite-image {
@@ -131,7 +117,6 @@
             border-left: 4px solid #87ceeb;
             box-shadow: 0 8px 25px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
-            animation: slideIn 0.8s ease-out;
         }
         
         .info-item:hover {
@@ -144,6 +129,7 @@
             color: #87ceeb;
             font-size: 1.3em;
             font-weight: 500;
+            letter-spacing: -0.01em;
         }
         
         .info-item p {
@@ -151,18 +137,18 @@
             color: white;
             font-size: 1.1em;
             line-height: 1.6;
+            font-weight: 400;
         }
         
         .confirmation-buttons {
             text-align: center;
             margin: 30px 0;
-            animation: slideIn 1s ease-out;
         }
         
         .btn {
             display: inline-block;
             padding: 15px 40px;
-            margin: 0 15px;
+            margin: 0 8px;
             border: none;
             border-radius: 50px;
             font-size: 1.1em;
@@ -172,6 +158,7 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-family: 'Inter', sans-serif;
         }
         
         .btn-confirm {
@@ -212,6 +199,7 @@
             font-size: 1.2em;
             margin: 0;
             opacity: 0.8;
+            font-weight: 400;
         }
         
         .loading {
@@ -230,6 +218,7 @@
             font-size: 1.2em;
             margin: 0;
             opacity: 0.8;
+            font-weight: 400;
         }
         
         .error {
@@ -251,22 +240,12 @@
             font-size: 1.1em;
             margin: 0;
             opacity: 0.9;
+            font-weight: 400;
         }
         
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
         
         @keyframes spectacularEntry {
@@ -326,6 +305,10 @@
                 display: block;
                 margin: 15px auto;
                 width: 80%;
+            }
+            
+            .confirmation-buttons {
+                margin: 20px 0;
             }
         }
     </style>
@@ -413,15 +396,15 @@
                     throw new Error(`Parâmetros inválidos: event=${eventId}, guest=${guestId}`);
                 }
 
-                // Dados da URL - SEMPRE funcionam
-                const eventName = urlParams.get('eventName');
-                const eventDate = urlParams.get('eventDate');
-                const eventLocation = urlParams.get('eventLocation');
-                const eventDescription = urlParams.get('eventDescription');
-                const nameFromUrl = urlParams.get('name');
+                // Dados da URL - usando parâmetros otimizados
+                const eventName = urlParams.get('n') || urlParams.get('eventName');
+                const eventDate = urlParams.get('d') || urlParams.get('eventDate');
+                const eventLocation = urlParams.get('l') || urlParams.get('eventLocation');
+                const eventDescription = urlParams.get('desc') || urlParams.get('eventDescription');
+                const nameFromUrl = urlParams.get('nm') || urlParams.get('name');
 
-                // SOLUÇÃO REAL: Carregar imagem diretamente da URL
-                const imageFromUrl = urlParams.get('image');
+                // SOLUÇÃO OTIMIZADA: Carregar imagem diretamente da URL
+                const imageFromUrl = urlParams.get('img') || urlParams.get('image');
                 
                 console.log('📊 Dados da URL:', { eventName, eventDate, eventLocation, eventDescription, nameFromUrl, hasImage: !!imageFromUrl });
                 
@@ -675,95 +658,9 @@
             }
         }
 
-        // Função para adicionar animações de entrada aos elementos
-        function addEntranceAnimations() {
-            const elements = document.querySelectorAll('.info-item, .guest-name, .invite-header, .confirmation-buttons');
-            
-            elements.forEach((element, index) => {
-                element.style.opacity = '0';
-                element.style.transform = 'translateY(20px)';
-                
-                setTimeout(() => {
-                    element.style.transition = 'all 0.4s ease-out';
-                    element.style.opacity = '1';
-                    element.style.transform = 'translateY(0)';
-                }, 150 * (index + 1));
-            });
-        }
-
-        // Função para adicionar efeitos de hover interativos
-        function addInteractiveEffects() {
-            // Efeito de ripple nos botões
-            const buttons = document.querySelectorAll('.btn');
-            buttons.forEach(button => {
-                button.addEventListener('click', function(e) {
-                    const ripple = document.createElement('span');
-                    const rect = this.getBoundingClientRect();
-                    const size = Math.max(rect.width, rect.height);
-                    const x = e.clientX - rect.left - size / 2;
-                    const y = e.clientY - rect.top - size / 2;
-                    
-                    ripple.style.cssText = `
-                        position: absolute;
-                        width: ${size}px;
-                        height: ${size}px;
-                        left: ${x}px;
-                        top: ${y}px;
-                        background: rgba(255, 255, 255, 0.3);
-                        border-radius: 50%;
-                        transform: scale(0);
-                        animation: ripple 0.6s linear;
-                        pointer-events: none;
-                    `;
-                    
-                    this.appendChild(ripple);
-                    
-                    setTimeout(() => {
-                        ripple.remove();
-                    }, 600);
-                });
-            });
-
-            // Efeito de parallax sutil no header
-            const header = document.querySelector('.invite-header');
-            if (header) {
-                window.addEventListener('scroll', () => {
-                    const scrolled = window.pageYOffset;
-                    const rate = scrolled * -0.5;
-                    header.style.transform = `translateY(${rate}px)`;
-                });
-            }
-        }
-
-        // Função para adicionar animações de loading
-        function addLoadingAnimations() {
-            const loading = document.querySelector('.loading');
-            if (loading) {
-                const spinner = loading.querySelector('i');
-                spinner.style.animation = 'spin 1s linear infinite';
-                
-                // Adicionar CSS para a animação de spin
-                const style = document.createElement('style');
-                style.textContent = `
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        }
-
         // Carregar dados quando a página carregar
         document.addEventListener('DOMContentLoaded', () => {
             loadInviteData();
-            
-            // Adicionar animações após um pequeno delay
-            setTimeout(() => {
-                addEntranceAnimations();
-                addInteractiveEffects();
-                addLoadingAnimations();
-            }, 100);
         });
     </script>
 </body>

@@ -246,8 +246,9 @@ function compressImageSync(imageDataUrl, maxWidth = 400) {
     // Desenhar imagem redimensionada
     ctx.drawImage(img, 0, 0, newWidth, newHeight);
     
-    // Retornar imagem comprimida
-    return canvas.toDataURL('image/jpeg', 0.5);
+    // Retornar imagem comprimida com qualidade ainda menor para URLs mais curtas
+    const quality = maxWidth <= 200 ? 0.3 : 0.5;
+    return canvas.toDataURL('image/jpeg', quality);
 }
 
 // Função para gerar link de confirmação com fallback para mobile
@@ -271,41 +272,57 @@ function generateConfirmationLink(guestId = null) {
     // Adicionar timestamp para evitar cache em dispositivos móveis
     const timestamp = Date.now();
     
-    // SEMPRE incluir dados do evento na URL para mobile
+    // SOLUÇÃO OTIMIZADA: Usar apenas dados essenciais e comprimir
     let eventParams = '';
-    eventParams += `&eventName=${encodeURIComponent(eventData.name || 'Evento')}`;
-    eventParams += `&eventDate=${encodeURIComponent(eventData.date || new Date().toISOString())}`;
-    eventParams += `&eventLocation=${encodeURIComponent(eventData.location || 'Local do evento')}`;
-    eventParams += `&eventDescription=${encodeURIComponent(eventData.description || 'Descrição do evento')}`;
     
-    // Adicionar nome do convidado se disponível
+    // Comprimir nome do evento (máximo 30 caracteres)
+    const eventName = (eventData.name || 'Evento').substring(0, 30);
+    eventParams += `&n=${encodeURIComponent(eventName)}`;
+    
+    // Comprimir data (usar formato mais curto)
+    if (eventData.date) {
+        const date = new Date(eventData.date);
+        const shortDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+        eventParams += `&d=${encodeURIComponent(shortDate)}`;
+    }
+    
+    // Comprimir local (máximo 25 caracteres)
+    const eventLocation = (eventData.location || 'Local').substring(0, 25);
+    eventParams += `&l=${encodeURIComponent(eventLocation)}`;
+    
+    // Comprimir descrição (máximo 50 caracteres)
+    const eventDescription = (eventData.description || 'Descrição').substring(0, 50);
+    eventParams += `&desc=${encodeURIComponent(eventDescription)}`;
+    
+    // Adicionar nome do convidado se disponível (máximo 20 caracteres)
     let nameParam = '';
     if (guestId) {
         const guest = guests.find(g => g.id === guestId);
         if (guest && guest.nome) {
-            nameParam = `&name=${encodeURIComponent(guest.nome)}`;
+            const shortName = guest.nome.substring(0, 20);
+            nameParam = `&nm=${encodeURIComponent(shortName)}`;
         }
     }
     
-    // SOLUÇÃO REAL: Comprimir imagem e incluir direto na URL
+    // SOLUÇÃO OTIMIZADA: Comprimir imagem mais agressivamente
     let imageParam = '';
     if (selectedImage) {
         try {
-            // Comprimir imagem de forma síncrona
-            const compressedImage = compressImageSync(selectedImage);
-            imageParam = `&image=${encodeURIComponent(compressedImage)}`;
-            console.log('🖼️ Imagem comprimida incluída na URL');
+            // Comprimir imagem de forma mais agressiva (menor qualidade e tamanho)
+            const compressedImage = compressImageSync(selectedImage, 200); // Reduzir para 200px
+            imageParam = `&img=${encodeURIComponent(compressedImage)}`;
+            console.log('🖼️ Imagem altamente comprimida incluída na URL');
         } catch (error) {
             console.error('❌ Erro ao comprimir imagem:', error);
         }
     }
     
     if (guestId) {
-        // Usar a nova página de convite personalizada
-        const finalUrl = `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}${eventParams}${imageParam}&t=${timestamp}`;
+        // Usar a nova página de convite personalizada com parâmetros otimizados
+        const finalUrl = `${baseUrl}?e=${encodedEvent}&g=${encodedGuest}${nameParam}${eventParams}${imageParam}&t=${timestamp}`;
         return finalUrl;
     }
-    return `${baseUrl}?event=${encodedEvent}&t=${timestamp}`;
+    return `${baseUrl}?e=${encodedEvent}&t=${timestamp}`;
 }
 
 function generateEventId() {
