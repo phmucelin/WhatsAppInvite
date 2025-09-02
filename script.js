@@ -253,24 +253,21 @@ function generateConfirmationLink(guestId = null) {
     // Adicionar timestamp para evitar cache em dispositivos móveis
     const timestamp = Date.now();
     
-    // Adicionar nome do convidado se disponível
+    // Adicionar nome do convidado se disponível (apenas se não for muito longo)
     let nameParam = '';
     if (guestId) {
         const guest = guests.find(g => g.id === guestId);
-        if (guest && guest.nome) {
+        if (guest && guest.nome && guest.nome.length < 50) {
             nameParam = `&name=${encodeURIComponent(guest.nome)}`;
         }
     }
     
-    // Adicionar imagem se disponível
-    let imageParam = '';
-    if (selectedImage) {
-        imageParam = `&image=${encodeURIComponent(selectedImage)}`;
-    }
+    // Não incluir imagem na URL para evitar links muito longos
+    // A imagem será carregada do localStorage ou dados padrão
     
     if (guestId) {
         // Usar a nova página de convite personalizada
-        return `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}${imageParam}&t=${timestamp}`;
+        return `${baseUrl}?event=${encodedEvent}&guest=${encodedGuest}${nameParam}&t=${timestamp}`;
     }
     return `${baseUrl}?event=${encodedEvent}&t=${timestamp}`;
 }
@@ -343,20 +340,22 @@ function prepareMessages() {
     const messages = guests.map(guest => {
         const confirmationLink = generateConfirmationLink(guest.id);
         
+        // Criar mensagem mais compacta para evitar URLs muito longas
         let message = messageTemplate
             .replace(/{nome}/g, guest.nome)
-            .replace(/{evento}/g, eventData.name)
-            .replace(/{data}/g, formatDate(eventData.date))
-            .replace(/{hora}/g, formatTime(eventData.date))
-            .replace(/{local}/g, eventData.location)
-            .replace(/{descricao}/g, eventData.description)
+            .replace(/{evento}/g, eventData.name || 'Evento')
+            .replace(/{data}/g, formatDate(eventData.date) || 'Data')
+            .replace(/{hora}/g, formatTime(eventData.date) || 'Hora')
+            .replace(/{local}/g, eventData.location || 'Local')
+            .replace(/{descricao}/g, eventData.description || 'Descrição')
             .replace(/{link}/g, confirmationLink);
         
         return {
             guest: guest,
             message: message,
             phone: guest.numero,
-            imageUrl: selectedImage // Incluir imagem se selecionada
+            imageUrl: selectedImage,
+            confirmationLink: confirmationLink
         };
     });
     
@@ -410,7 +409,7 @@ function createMessageInterface(messages) {
                                     style="background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">
                                 <i class="fas fa-copy"></i> Copiar
                             </button>
-                            <button onclick="sendSingleMessage('${msg.phone}', \`${msg.message.replace(/`/g, '\\`')}\`, '${msg.guest.id}')" 
+                            <button onclick="sendSingleMessage('${msg.guest.id}')" 
                                     class="btn-send-single" 
                                     style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
                                 <i class="fab fa-whatsapp"></i> Enviar
@@ -464,21 +463,51 @@ function createMessageInterface(messages) {
     window.preparedMessages = messages;
 }
 
-function sendSingleMessage(phone, message, guestId) {
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+// Função para abrir WhatsApp com mensagem formatada
+function openWhatsAppWithMessage(phone, message) {
+    // Limpar e formatar número de telefone
+    let cleanPhone = phone.replace(/\D/g, '');
+    
+    // Adicionar código do país se não tiver
+    if (!cleanPhone.startsWith('55')) {
+        cleanPhone = '55' + cleanPhone;
+    }
+    
+    // Codificar mensagem para URL
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Criar link do WhatsApp
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+    
+    console.log('📱 Abrindo WhatsApp:', whatsappUrl);
+    
+    // Abrir em nova aba
     window.open(whatsappUrl, '_blank');
+}
+
+// Função para enviar mensagem individual
+function sendSingleMessage(guestId) {
+    const guest = guests.find(g => g.id === guestId);
+    if (!guest) return;
+    
+    const messageTemplate = document.getElementById('messageTemplate').value;
+    const confirmationLink = generateConfirmationLink(guest.id);
+    
+    // Criar mensagem compacta
+    let message = messageTemplate
+        .replace(/{nome}/g, guest.nome)
+        .replace(/{evento}/g, eventData.name || 'Evento')
+        .replace(/{data}/g, formatDate(eventData.date) || 'Data')
+        .replace(/{hora}/g, formatTime(eventData.date) || 'Hora')
+        .replace(/{local}/g, eventData.location || 'Local')
+        .replace(/{descricao}/g, eventData.description || 'Descrição')
+        .replace(/{link}/g, confirmationLink);
+    
+    // Abrir WhatsApp com mensagem
+    openWhatsAppWithMessage(guest.numero, message);
     
     // Marcar como enviado
-    markAsSent(phone, guestId);
-    
-    // Mostrar status
-    const statusElement = document.getElementById(`status_${guestId}`);
-    if (statusElement) {
-        statusElement.style.display = 'block';
-        statusElement.style.background = '#d4edda';
-        statusElement.style.color = '#155724';
-        statusElement.innerHTML = '✅ Enviado via WhatsApp';
-    }
+    markAsSent(guestId);
 }
 
 function copyMessageToClipboard(message) {
@@ -522,28 +551,25 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-function markAsSent(phone, guestId) {
-    // Encontrar o botão correspondente e desabilitar
-    const messageItem = document.querySelector(`[data-guest-id="${guestId}"]`);
-    if (messageItem) {
-        const sendButton = messageItem.querySelector('.btn-send-single');
-        if (sendButton) {
-            sendButton.disabled = true;
-            sendButton.style.background = '#6c757d';
-            sendButton.innerHTML = '<i class="fas fa-check"></i> Enviado';
-            sendButton.style.cursor = 'not-allowed';
-        }
-        
-        // Desmarcar checkbox
-        const checkbox = messageItem.querySelector('.guest-checkbox');
-        if (checkbox) {
-            checkbox.checked = false;
-            checkbox.disabled = true;
-        }
+function markAsSent(guestId) {
+    // Marcar como enviado
+    const guest = guests.find(g => g.id === guestId);
+    if (guest) {
+        guest.sent = true;
+        saveData();
     }
     
-    // Atualizar contador de enviados
-    updateSentCounter();
+    // Mostrar status
+    const statusElement = document.getElementById(`status_${guestId}`);
+    if (statusElement) {
+        statusElement.style.display = 'block';
+        statusElement.style.background = '#d4edda';
+        statusElement.style.color = '#155724';
+        statusElement.innerHTML = '✅ Enviado via WhatsApp';
+    }
+    
+    // Atualizar contador
+    updateSelectedCounter();
 }
 
 function updateSentCounter() {
@@ -585,18 +611,24 @@ function deselectAllGuests() {
 
 // Função para enviar mensagens selecionadas
 function sendSelectedMessages() {
-    const selectedCheckboxes = document.querySelectorAll('.guest-checkbox:checked:not(:disabled)');
+    const selectedGuests = document.querySelectorAll('.guest-checkbox:checked');
     
-    if (selectedCheckboxes.length === 0) {
-        alert('Por favor, selecione pelo menos um convidado para enviar.');
+    if (selectedGuests.length === 0) {
+        alert('Por favor, selecione pelo menos um convidado.');
         return;
     }
     
-    // Abrir WhatsApp Web
-    window.open('https://web.whatsapp.com/', '_blank');
-    
-    // Mostrar instruções
-    alert(`WhatsApp Web foi aberto!\n\n📱 Você selecionou ${selectedCheckboxes.length} convidado(s).\n\n💡 Agora você pode:\n1. Usar os botões "Enviar" individuais para cada convidado selecionado\n2. Ou copiar e colar as mensagens manualmente no WhatsApp Web\n\n✅ Os convidados não selecionados permanecerão disponíveis para envio posterior.`);
+    // Enviar mensagem para cada convidado selecionado
+    selectedGuests.forEach(checkbox => {
+        const guestId = checkbox.value;
+        sendSingleMessage(guestId);
+        
+        // Pequeno delay entre envios para não sobrecarregar
+        setTimeout(() => {
+            // Desmarcar checkbox após envio
+            checkbox.checked = false;
+        }, 1000);
+    });
     
     // Atualizar contador
     updateSelectedCounter();
